@@ -18,6 +18,7 @@ Double‑click `Start Ledger App.html`. It automatically redirects to `apps/acco
 - Inventory management with manual price overrides
 - Vending stalls (max 12 items), sales history, and tax calculation
 - Cross‑account search
+- Loans: track items lent to other players
 
 ## How It Works
 - Data is stored in your browser `localStorage`.
@@ -52,6 +53,7 @@ Repo ayarlarından GitHub Pages’i açın ve şu adresi ziyaret edin:
 - Envanter yönetimi ve manuel fiyat
 - Vending tezgahları (max 12 ürün), satış ve vergi hesabı
 - Hesaplar arası arama
+- Borç: başkalarına verilen item’ları takip etme
 
 ### Veri ve Yedek
 - Veriler tarayıcı `localStorage` içinde saklanır.

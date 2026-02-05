@@ -42,6 +42,17 @@ const elements = {
   vendingCharacter: document.getElementById("vending-character"),
   vendingOpen: document.getElementById("vending-open"),
   vendingList: document.getElementById("vending-list"),
+  loanPerson: document.getElementById("loan-person"),
+  loanItem: document.getElementById("loan-item"),
+  loanQty: document.getElementById("loan-qty"),
+  loanDate: document.getElementById("loan-date"),
+  loanNote: document.getElementById("loan-note"),
+  loanAdd: document.getElementById("loan-add"),
+  loanList: document.getElementById("loan-list"),
+  loanFilter: document.getElementById("loan-filter"),
+  loanSummary: document.getElementById("loan-summary"),
+  loanSuggestions: document.getElementById("loan-suggestions"),
+  loanStatus: document.getElementById("loan-status"),
   ocrDrop: document.getElementById("ocr-drop"),
   ocrPreview: document.getElementById("ocr-preview"),
   ocrFile: document.getElementById("ocr-file"),
@@ -153,19 +164,61 @@ function normalizeVendingList(list = []) {
   });
 }
 
+function normalizeLoan(entry, fallbackPerson = "Player") {
+  if (!entry) return null;
+  const person = String(entry.person || entry.to || entry.borrower || fallbackPerson).trim() || fallbackPerson;
+  let itemId = Number(entry.itemId || entry.item || entry.item_id);
+  if (!Number.isFinite(itemId) || itemId <= 0) itemId = null;
+  const rawName = String(entry.itemName || entry.item_name || entry.item || "").trim();
+  const itemName = itemId ? (itemsById.get(itemId)?.name || rawName || "Unknown Item") : (rawName || "Unknown Item");
+  const qty = Math.max(1, Number(entry.qty) || 1);
+  const note = String(entry.note || entry.notes || "").trim();
+  const givenAt = entry.givenAt || entry.date || entry.lentAt || "";
+  const returnedAt = entry.returnedAt || "";
+  const status = (entry.status === "returned" || returnedAt) ? "returned" : "active";
+  return {
+    id: entry.id || createId("loan"),
+    person,
+    itemId,
+    itemName,
+    qty,
+    note,
+    givenAt,
+    returnedAt,
+    status
+  };
+}
+
+function normalizeLoans(list = []) {
+  const seen = new Set();
+  return list
+    .map((entry, index) => normalizeLoan(entry, `Player ${index + 1}`))
+    .filter(Boolean)
+    .map((loan) => {
+      let nextId = loan.id;
+      while (seen.has(nextId)) {
+        nextId = createId("loan");
+      }
+      seen.add(nextId);
+      return { ...loan, id: nextId };
+    });
+}
+
 function normalizeAccount(data = {}, fallbackName = "Account") {
   const name = (data.name || fallbackName || "Account").trim() || "Account";
   const zeny = { ...ZENY_TEMPLATE, ...(data.zeny || {}) };
   const items = Array.isArray(data.items) ? data.items : [];
   const vending = Array.isArray(data.vending) ? normalizeVendingList(data.vending) : [];
   const characters = Array.isArray(data.characters) ? normalizeCharacters(data.characters) : [];
+  const loans = Array.isArray(data.loans) ? normalizeLoans(data.loans) : [];
   return {
     id: data.id || createId(),
     name,
     zeny,
     items,
     vending,
-    characters
+    characters,
+    loans
   };
 }
 
@@ -340,6 +393,7 @@ function setActiveAccount(accountId) {
   saveState();
   updateZenyInputs();
   renderInventory();
+  renderLoans();
   updateStats();
   renderAccountSelectors();
 }
@@ -390,6 +444,9 @@ function getActiveAccount() {
   if (!Array.isArray(account.characters)) {
     account.characters = [];
   }
+  if (!Array.isArray(account.loans)) {
+    account.loans = [];
+  }
   return account;
 }
 
@@ -410,6 +467,14 @@ function getAllAccountsZenyTotal() {
 function formatZeny(value) {
   const num = Number(value) || 0;
   return `${formatNumber(num)} z`;
+}
+
+function formatLoanDate(value) {
+  if (!value) return "Unknown";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString();
 }
 
 function getBasisPrice(item) {
@@ -1552,6 +1617,108 @@ function renderVending() {
   });
 }
 
+function setLoanStatus(message = "") {
+  if (!elements.loanStatus) return;
+  elements.loanStatus.textContent = message;
+}
+
+function renderLoans() {
+  if (!elements.loanList) return;
+  const account = getActiveAccount();
+  const loans = Array.isArray(account.loans) ? account.loans : [];
+  const filter = elements.loanFilter ? elements.loanFilter.value : "all";
+  const filtered = loans.filter(loan => {
+    if (filter === "active") return loan.status !== "returned";
+    if (filter === "returned") return loan.status === "returned";
+    return true;
+  });
+
+  const activeCount = loans.filter(loan => loan.status !== "returned").length;
+  const returnedCount = loans.filter(loan => loan.status === "returned").length;
+  if (elements.loanSummary) {
+    elements.loanSummary.textContent = `${loans.length} total • ${activeCount} active • ${returnedCount} returned`;
+  }
+
+  elements.loanList.innerHTML = "";
+  if (!filtered.length) {
+    const note = document.createElement("div");
+    note.className = "result-note";
+    note.textContent = "No loans yet.";
+    elements.loanList.append(note);
+    return;
+  }
+
+  filtered.forEach((loan) => {
+    const item = loan.itemId ? itemsById.get(loan.itemId) : null;
+    const itemName = item?.name || loan.itemName || "Unknown Item";
+    const iconSrc = loan.itemId ? getItemIcon(loan.itemId) : getItemIcon(0);
+
+    const row = document.createElement("div");
+    row.className = "loan-row";
+
+    const img = document.createElement("img");
+    img.src = iconSrc;
+    img.alt = itemName;
+
+    const info = document.createElement("div");
+    info.className = "loan-info";
+    const statusLabel = loan.status === "returned" ? "Returned" : "Active";
+    const given = formatLoanDate(loan.givenAt);
+    const returned = loan.returnedAt ? formatLoanDate(loan.returnedAt) : "";
+    const title = document.createElement("strong");
+    title.textContent = itemName;
+    const meta = document.createElement("div");
+    meta.className = "loan-meta";
+    meta.textContent = `To: ${loan.person} • Qty: x${loan.qty} • Given: ${given}${returned ? ` • Returned: ${returned}` : ""}`;
+    const tags = document.createElement("div");
+    tags.className = "loan-tags";
+    const tag = document.createElement("span");
+    tag.className = `loan-tag ${loan.status === "returned" ? "returned" : "active"}`;
+    tag.textContent = statusLabel;
+    tags.append(tag);
+    info.append(title, meta, tags);
+    if (loan.note) {
+      const noteEl = document.createElement("div");
+      noteEl.className = "loan-note";
+      noteEl.textContent = loan.note;
+      info.append(noteEl);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "loan-actions";
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "ghost";
+    toggleBtn.textContent = loan.status === "returned" ? "Reopen" : "Mark Returned";
+    toggleBtn.addEventListener("click", () => {
+      if (loan.status === "returned") {
+        loan.status = "active";
+        loan.returnedAt = "";
+      } else {
+        loan.status = "returned";
+        loan.returnedAt = new Date().toISOString().slice(0, 10);
+      }
+      saveState();
+      renderLoans();
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "danger";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      account.loans = account.loans.filter(entry => entry.id !== loan.id);
+      saveState();
+      renderLoans();
+    });
+
+    actions.append(toggleBtn, removeBtn);
+    row.append(img, info, actions);
+    elements.loanList.append(row);
+  });
+}
+
 function populateFilters() {
   const types = new Set();
   const categories = new Set();
@@ -1907,6 +2074,79 @@ function attachEvents() {
       }
     });
   }
+  if (elements.loanItem || elements.loanAdd || elements.loanFilter) {
+    let selectedLoanItemId = null;
+
+    const renderLoanSuggestions = () => {
+      if (!elements.loanSuggestions || !elements.loanItem) return;
+      elements.loanSuggestions.innerHTML = "";
+      const list = findClosestItems(elements.loanItem.value, 6);
+      list.forEach(suggestion => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "ocr-chip";
+        chip.textContent = suggestion.name;
+        chip.addEventListener("click", () => {
+          elements.loanItem.value = suggestion.name;
+          selectedLoanItemId = suggestion.id;
+          renderLoanSuggestions();
+        });
+        elements.loanSuggestions.append(chip);
+      });
+    };
+
+    if (elements.loanItem) {
+      elements.loanItem.addEventListener("input", () => {
+        selectedLoanItemId = matchLineToItem(elements.loanItem.value);
+        renderLoanSuggestions();
+      });
+    }
+
+    if (elements.loanAdd) {
+      elements.loanAdd.addEventListener("click", () => {
+        const account = getActiveAccount();
+        const person = elements.loanPerson ? elements.loanPerson.value.trim() : "";
+        const rawName = elements.loanItem ? elements.loanItem.value.trim() : "";
+        const qty = Math.max(1, Number(elements.loanQty?.value) || 1);
+        const note = elements.loanNote ? elements.loanNote.value.trim() : "";
+        const givenAt = elements.loanDate?.value || new Date().toISOString().slice(0, 10);
+
+        if (!person || !rawName) {
+          setLoanStatus("Enter a player name and item name.");
+          return;
+        }
+
+        let itemId = selectedLoanItemId || matchLineToItem(rawName);
+        if (!itemId) itemId = null;
+        const itemName = itemId ? (itemsById.get(itemId)?.name || rawName) : rawName;
+
+        account.loans = Array.isArray(account.loans) ? account.loans : [];
+        account.loans.unshift({
+          id: createId("loan"),
+          person,
+          itemId,
+          itemName,
+          qty,
+          note,
+          givenAt,
+          returnedAt: "",
+          status: "active"
+        });
+        saveState();
+        setLoanStatus("");
+        if (elements.loanItem) elements.loanItem.value = "";
+        if (elements.loanNote) elements.loanNote.value = "";
+        if (elements.loanQty) elements.loanQty.value = "1";
+        selectedLoanItemId = null;
+        renderLoanSuggestions();
+        renderLoans();
+      });
+    }
+
+    if (elements.loanFilter) {
+      elements.loanFilter.addEventListener("change", () => renderLoans());
+    }
+  }
   const ocrEnabled = Boolean(elements.ocrDrop || elements.ocrFile || elements.ocrModal);
   if (ocrEnabled) {
     if (elements.ocrFile) {
@@ -1980,6 +2220,7 @@ function attachEvents() {
           elements.inventorySearch.value = state.inventorySearch || "";
         }
         renderInventory();
+        renderLoans();
       } catch (_) {
         // ignore invalid file
       }
@@ -2002,6 +2243,7 @@ function attachEvents() {
       elements.inventorySearch.value = state.inventorySearch || "";
     }
     renderInventory();
+    renderLoans();
   });
   elements.clearInventory.addEventListener("click", () => {
     if (!confirm("Clear inventory list?")) return;
@@ -2029,6 +2271,9 @@ function init() {
   renderAccountSelectors();
   renderCharacters();
   renderGlobalSearchResults();
+  if (elements.loanDate && !elements.loanDate.value) {
+    elements.loanDate.value = new Date().toISOString().slice(0, 10);
+  }
   if (elements.inventorySearch) {
     elements.inventorySearch.value = state.inventorySearch || "";
   }
@@ -2041,6 +2286,7 @@ function init() {
   attachEvents();
   renderSearchResults();
   renderInventory();
+  renderLoans();
 }
 
 init();

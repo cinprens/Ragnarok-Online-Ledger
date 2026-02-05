@@ -14,6 +14,7 @@
         <button class="nav-link is-active" type="button" data-section-link="section-dashboard">Dashboard</button>
         <button class="nav-link" type="button" data-section-link="section-accounts">Accounts</button>
         <button class="nav-link" type="button" data-section-link="section-vending">Vending Stalls</button>
+        <button class="nav-link" type="button" data-section-link="section-loans">Loans</button>
         <button class="nav-link" type="button" data-section-link="section-zeny">Zeny Vaults</button>
         <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
         <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
@@ -147,6 +148,34 @@
         </div>
       </section>
 
+      <section class="section" id="section-loans" data-section>
+        <div class="panel loans-panel">
+          <div class="panel-header">
+            <h2>Loans</h2>
+            <p>Track items you lent to other players.</p>
+          </div>
+          <div class="loan-form">
+            <input type="text" id="loan-person" placeholder="Player name">
+            <input type="text" id="loan-item" placeholder="Item name...">
+            <input type="number" id="loan-qty" min="1" value="1">
+            <input type="date" id="loan-date">
+            <input type="text" id="loan-note" placeholder="Note (optional)">
+            <button class="ghost" id="loan-add">Add Loan</button>
+          </div>
+          <div class="loan-suggestions" id="loan-suggestions"></div>
+          <div class="loan-status" id="loan-status"></div>
+          <div class="loan-toolbar">
+            <select id="loan-filter">
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="returned">Returned</option>
+            </select>
+            <div class="loan-summary" id="loan-summary"></div>
+          </div>
+          <div class="loan-list" id="loan-list"></div>
+        </div>
+      </section>
+
       <section class="section" id="section-zeny" data-section>
         <div class="panel">
           <div class="panel-header">
@@ -260,6 +289,7 @@
               <ul class="guide-list">
                 <li>Dashboard: overall Zeny, inventory value, net worth, and top holdings.</li>
                 <li>Accounts: manage accounts, characters, and global item search.</li>
+                <li>Loans: record which items you lent to other players.</li>
                 <li>Zeny Vaults: split Zeny across storage types and characters.</li>
                 <li>Item Finder: search by name, type, and category to add items.</li>
                 <li>Inventory: edit quantity, set manual prices, and filter by group.</li>

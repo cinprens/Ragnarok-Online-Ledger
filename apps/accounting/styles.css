@@ -758,6 +758,110 @@ button.danger {
   font-size: 0.85rem;
 }
 
+.loan-form {
+  display: grid;
+  grid-template-columns: 1.1fr 1.6fr 90px 140px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.loan-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.loan-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  min-height: 1em;
+}
+
+.loan-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.loan-summary {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.loan-list {
+  display: grid;
+  gap: 10px;
+}
+
+.loan-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(216, 178, 110, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.loan-row img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.loan-info strong {
+  display: block;
+}
+
+.loan-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.loan-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.loan-tag {
+  border: 1px solid rgba(216, 178, 110, 0.35);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.loan-tag.active {
+  border-color: rgba(216, 178, 110, 0.6);
+  color: #ffe7b5;
+}
+
+.loan-tag.returned {
+  border-color: rgba(98, 224, 194, 0.55);
+  color: #bff5e7;
+}
+
+.loan-note {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.loan-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -1423,6 +1527,10 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
+  .loan-form {
+    grid-template-columns: 1fr 1fr 90px 140px 1fr auto;
+  }
+
   .guide-grid {
     grid-template-columns: 1fr;
   }
@@ -1506,6 +1614,15 @@ select:focus {
   }
 
   .vending-item-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .loan-form {
+    grid-template-columns: 1fr;
+  }
+
+  .loan-row {
     grid-template-columns: 1fr;
     align-items: start;
   }
