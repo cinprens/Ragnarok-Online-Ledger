@@ -1907,42 +1907,45 @@ function attachEvents() {
       }
     });
   }
-  if (elements.ocrFile) {
-    elements.ocrFile.addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      if (file) handleOcrImage(file);
-      event.target.value = "";
-    });
-  }
-  if (elements.ocrDrop && elements.ocrFile) {
-    elements.ocrDrop.addEventListener("click", () => elements.ocrFile.click());
-  }
-  if (elements.ocrClear) {
-    elements.ocrClear.addEventListener("click", () => {
-      lastOcrBlob = null;
-      setOcrPreview(null);
-      setOcrStatus("Waiting for image...");
-    });
-  }
-  if (elements.ocrConfirm) {
-    elements.ocrConfirm.addEventListener("click", () => applyOcrImport());
-  }
-  if (elements.ocrCancel) {
-    elements.ocrCancel.addEventListener("click", () => hideOcrModal());
-  }
-  document.addEventListener("paste", (event) => {
-    const items = event.clipboardData?.items || [];
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const blob = item.getAsFile();
-        if (blob) {
-          handleOcrImage(blob);
-          event.preventDefault();
-          break;
+  const ocrEnabled = Boolean(elements.ocrDrop || elements.ocrFile || elements.ocrModal);
+  if (ocrEnabled) {
+    if (elements.ocrFile) {
+      elements.ocrFile.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) handleOcrImage(file);
+        event.target.value = "";
+      });
+    }
+    if (elements.ocrDrop && elements.ocrFile) {
+      elements.ocrDrop.addEventListener("click", () => elements.ocrFile.click());
+    }
+    if (elements.ocrClear) {
+      elements.ocrClear.addEventListener("click", () => {
+        lastOcrBlob = null;
+        setOcrPreview(null);
+        setOcrStatus("Waiting for image...");
+      });
+    }
+    if (elements.ocrConfirm) {
+      elements.ocrConfirm.addEventListener("click", () => applyOcrImport());
+    }
+    if (elements.ocrCancel) {
+      elements.ocrCancel.addEventListener("click", () => hideOcrModal());
+    }
+    document.addEventListener("paste", (event) => {
+      const items = event.clipboardData?.items || [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const blob = item.getAsFile();
+          if (blob) {
+            handleOcrImage(blob);
+            event.preventDefault();
+            break;
+          }
         }
       }
-    }
-  });
+    });
+  }
   elements.exportBtn.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

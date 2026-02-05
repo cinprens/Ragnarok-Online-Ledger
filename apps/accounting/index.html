@@ -16,7 +16,6 @@
         <button class="nav-link" type="button" data-section-link="section-vending">Vending Stalls</button>
         <button class="nav-link" type="button" data-section-link="section-zeny">Zeny Vaults</button>
         <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
-        <button class="nav-link" type="button" data-section-link="section-ocr">Quick Import</button>
         <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
         <button class="nav-link" type="button" data-section-link="section-guide">User Guide</button>
       </nav>
@@ -218,28 +217,6 @@
         </div>
       </section>
 
-      <section class="section" id="section-ocr" data-section>
-        <div class="panel">
-          <div class="panel-header">
-            <h2>Quick Import (OCR)</h2>
-            <p>Win+Shift+S then Ctrl+V to paste and import.</p>
-          </div>
-          <div class="ocr-box" id="ocr-drop">
-            <div class="ocr-title">Paste Screenshot Here</div>
-            <div class="ocr-subtitle">We will scan and match item names.</div>
-            <div class="ocr-preview" id="ocr-preview"></div>
-          </div>
-          <div class="ocr-actions">
-            <label class="ghost file-btn">
-              Upload Image
-              <input type="file" id="ocr-file" accept="image/*">
-            </label>
-            <button class="ghost" id="ocr-clear">Clear</button>
-            <div class="ocr-status" id="ocr-status">Waiting for image...</div>
-          </div>
-        </div>
-      </section>
-
       <section class="section" id="section-inventory" data-section>
         <div class="panel">
           <div class="panel-header">
@@ -287,7 +264,6 @@
                 <li>Item Finder: search by name, type, and category to add items.</li>
                 <li>Inventory: edit quantity, set manual prices, and filter by group.</li>
                 <li>Vending Stalls: track shop items, sales, tax, and net.</li>
-                <li>Quick Import (OCR): paste or upload screenshots to import items.</li>
               </ul>
             </div>
             <div class="guide-block">
@@ -313,7 +289,6 @@
                 <li>Data is stored in the browser local storage. Export for backups.</li>
                 <li>Setting an inventory quantity to 0 removes the item.</li>
                 <li>Manual price overrides the item value used in totals.</li>
-                <li>OCR works offline, and clearer screenshots improve matches.</li>
               </ul>
             </div>
           </div>
@@ -322,21 +297,7 @@
     </main>
   </div>
 
-  <div class="ocr-modal" id="ocr-modal" aria-hidden="true">
-    <div class="ocr-dialog">
-      <h3>Confirm Import</h3>
-      <p id="ocr-summary">We found the following items. Fix names or pick a suggestion.</p>
-      <div class="ocr-items" id="ocr-items"></div>
-      <div class="ocr-unknown" id="ocr-unknown"></div>
-      <div class="ocr-dialog-actions">
-        <button class="ghost" id="ocr-cancel">Cancel</button>
-        <button class="ghost primary" id="ocr-confirm">Import Items</button>
-      </div>
-    </div>
-  </div>
-
   <script src="data/items-data.js"></script>
-  <script src="assets/ocr/tesseract.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
