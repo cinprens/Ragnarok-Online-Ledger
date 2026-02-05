@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ragnarok Accounting Ledger</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Sections</div>
+      <nav class="sidebar-nav">
+        <button class="nav-link is-active" type="button" data-section-link="section-dashboard">Dashboard</button>
+        <button class="nav-link" type="button" data-section-link="section-accounts">Accounts</button>
+        <button class="nav-link" type="button" data-section-link="section-vending">Vending Stalls</button>
+        <button class="nav-link" type="button" data-section-link="section-zeny">Zeny Vaults</button>
+        <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
+        <button class="nav-link" type="button" data-section-link="section-ocr">Quick Import</button>
+        <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
+      </nav>
+      <div class="sidebar-block">
+        <div class="sidebar-label">Active Account</div>
+        <select id="active-account-select"></select>
+        <div class="sidebar-meta" id="active-account-meta"></div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="section is-active" id="section-dashboard" data-section>
+        <header class="hero">
+          <div class="hero-text">
+            <div class="hero-eyebrow">Ragnarok Ledger</div>
+            <h1>Accounting Vault</h1>
+            <p>Track Zeny and inventory value with manual pricing (offline mode).</p>
+          </div>
+          <div class="hero-meta">
+            <div class="meta-card">
+              <span>Data Source</span>
+              <strong>Offline</strong>
+            </div>
+            <div class="meta-card">
+              <span>Snapshot</span>
+              <strong id="meta-updated">Local</strong>
+            </div>
+            <div class="meta-card">
+              <span>Items</span>
+              <strong id="meta-count">0</strong>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="ghost" id="exportBtn">Export</button>
+            <label class="ghost file-btn">
+              Import
+              <input type="file" id="importFile" accept="application/json">
+            </label>
+            <button class="danger" id="resetBtn">Reset</button>
+          </div>
+        </header>
+
+        <section class="stats">
+          <div class="stat-card">
+            <span>All Accounts Zeny</span>
+            <strong id="total-zeny-all">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Total Zeny</span>
+            <strong id="total-zeny">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Inventory Value</span>
+            <strong id="inventory-value">0</strong>
+          </div>
+          <div class="stat-card highlight">
+            <span>Net Worth</span>
+            <strong id="net-worth">0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Items Owned</span>
+            <strong id="items-owned">0</strong>
+          </div>
+        </section>
+
+        <section class="overview">
+          <div class="panel overview-panel">
+            <div class="panel-header">
+              <h2>Portfolio Overview</h2>
+              <p>Inventory value distribution by category.</p>
+            </div>
+            <div class="chart-list" id="group-chart"></div>
+          </div>
+          <div class="panel overview-panel">
+            <div class="panel-header">
+              <h2>Top Holdings</h2>
+              <p>Highest value items in your inventory.</p>
+            </div>
+            <div class="top-items" id="top-items"></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="section" id="section-accounts" data-section>
+        <div class="panel account-panel">
+          <div class="panel-header">
+            <h2>Accounts</h2>
+            <p>Track Zeny and inventory per account.</p>
+          </div>
+          <div class="account-toolbar">
+            <div class="account-list" id="account-list"></div>
+            <div class="account-actions">
+              <input type="text" id="account-name" placeholder="Account name">
+              <button class="ghost" id="account-add">Add</button>
+              <button class="ghost" id="account-rename">Rename</button>
+              <button class="danger" id="account-delete">Delete</button>
+            </div>
+          </div>
+          <div class="character-panel">
+            <div class="character-header">
+              <strong>Characters</strong>
+              <span id="character-count">0/7</span>
+            </div>
+            <div class="character-add">
+              <input type="text" id="character-name" placeholder="Character name">
+              <input type="number" id="character-zeny" min="0" step="1" placeholder="Zeny">
+              <button class="ghost" id="character-add">Add Character</button>
+            </div>
+            <div class="character-list" id="character-list"></div>
+          </div>
+          <div class="global-search">
+            <input type="text" id="global-search" placeholder="Search item across all accounts...">
+          </div>
+          <div class="global-results" id="global-results"></div>
+        </div>
+      </section>
+
+      <section class="section" id="section-vending" data-section>
+        <div class="panel vending-panel">
+          <div class="panel-header">
+            <h2>Vending Stalls</h2>
+            <p>Open vending per character (max 12 items each).</p>
+          </div>
+          <div class="vending-toolbar">
+            <input type="text" id="vending-character" placeholder="Character name">
+            <button class="ghost" id="vending-open">Open Vending</button>
+          </div>
+          <div class="vending-list" id="vending-list"></div>
+        </div>
+      </section>
+
+      <section class="section" id="section-zeny" data-section>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <h2>Zeny Vaults</h2>
+              <p>Split your Zeny across storages.</p>
+            </div>
+            <div class="panel-actions">
+              <div class="inline-label">
+                Account
+                <select id="zeny-account-select"></select>
+              </div>
+              <div class="inline-label">
+                Character
+                <select id="zeny-character-select"></select>
+              </div>
+            </div>
+          </div>
+          <div class="field-grid">
+            <label>
+              Wallet
+              <input type="number" id="zeny-wallet" min="0" step="1" placeholder="0">
+            </label>
+            <label>
+              Storage
+              <input type="number" id="zeny-storage" min="0" step="1" placeholder="0">
+            </label>
+            <label>
+              Merchant
+              <input type="number" id="zeny-merchant" min="0" step="1" placeholder="0">
+            </label>
+            <label>
+              Bank
+              <input type="number" id="zeny-bank" min="0" step="1" placeholder="0">
+            </label>
+            <label>
+              Other
+              <input type="number" id="zeny-other" min="0" step="1" placeholder="0">
+            </label>
+          </div>
+          <div class="character-zeny-panel">
+            <label>
+              Character Zeny
+              <input type="number" id="zeny-character-value" min="0" step="1" placeholder="0">
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="section-finder" data-section>
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Item Finder</h2>
+            <p>Search and add items to your inventory.</p>
+          </div>
+          <div class="search-bar">
+            <input type="text" id="item-search" placeholder="Search item name...">
+          </div>
+          <div class="filters">
+            <select id="filter-type">
+              <option value="">All Types</option>
+            </select>
+            <select id="filter-category">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div class="results" id="search-results"></div>
+        </div>
+      </section>
+
+      <section class="section" id="section-ocr" data-section>
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Quick Import (OCR)</h2>
+            <p>Win+Shift+S then Ctrl+V to paste and import.</p>
+          </div>
+          <div class="ocr-box" id="ocr-drop">
+            <div class="ocr-title">Paste Screenshot Here</div>
+            <div class="ocr-subtitle">We will scan and match item names.</div>
+            <div class="ocr-preview" id="ocr-preview"></div>
+          </div>
+          <div class="ocr-actions">
+            <label class="ghost file-btn">
+              Upload Image
+              <input type="file" id="ocr-file" accept="image/*">
+            </label>
+            <button class="ghost" id="ocr-clear">Clear</button>
+            <div class="ocr-status" id="ocr-status">Waiting for image...</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="section-inventory" data-section>
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Inventory</h2>
+            <p>Adjust quantity, override price, and track total value.</p>
+          </div>
+          <div class="inventory-toolbar">
+            <div class="inventory-search">
+              <input type="text" id="inventory-search" placeholder="Search your inventory...">
+            </div>
+            <div class="inventory-actions">
+              <span id="inventory-summary">0 items</span>
+              <button class="ghost" id="clearInventory">Clear</button>
+            </div>
+          </div>
+          <div class="group-filter" id="group-filter"></div>
+          <div class="inventory" id="inventory-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="ocr-modal" id="ocr-modal" aria-hidden="true">
+    <div class="ocr-dialog">
+      <h3>Confirm Import</h3>
+      <p id="ocr-summary">We found the following items. Fix names or pick a suggestion.</p>
+      <div class="ocr-items" id="ocr-items"></div>
+      <div class="ocr-unknown" id="ocr-unknown"></div>
+      <div class="ocr-dialog-actions">
+        <button class="ghost" id="ocr-cancel">Cancel</button>
+        <button class="ghost primary" id="ocr-confirm">Import Items</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/items-data.js"></script>
+  <script src="assets/ocr/tesseract.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
