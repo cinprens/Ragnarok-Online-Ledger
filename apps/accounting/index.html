@@ -18,6 +18,7 @@
         <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
         <button class="nav-link" type="button" data-section-link="section-ocr">Quick Import</button>
         <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
+        <button class="nav-link" type="button" data-section-link="section-guide">User Guide</button>
       </nav>
       <div class="sidebar-block">
         <div class="sidebar-label">Active Account</div>
@@ -256,6 +257,66 @@
           </div>
           <div class="group-filter" id="group-filter"></div>
           <div class="inventory" id="inventory-list"></div>
+        </div>
+      </section>
+
+      <section class="section" id="section-guide" data-section>
+        <div class="panel guide-panel">
+          <div class="panel-header">
+            <h2>User Guide</h2>
+            <p>How to use Ragnarok Accounting Ledger (offline mode).</p>
+          </div>
+          <div class="guide-grid">
+            <div class="guide-block">
+              <h3>Quick Start</h3>
+              <ol class="guide-steps">
+                <li>Open Accounts, type a name, then click Add.</li>
+                <li>Add characters and their Zeny (max 7 characters per account).</li>
+                <li>Go to Zeny Vaults and fill Wallet, Storage, Merchant, Bank, and Other.</li>
+                <li>Use Item Finder to search items and click Add.</li>
+                <li>In Inventory, adjust quantities and set Manual price if needed.</li>
+                <li>Check Dashboard for totals and export a backup.</li>
+              </ol>
+            </div>
+            <div class="guide-block">
+              <h3>Core Sections</h3>
+              <ul class="guide-list">
+                <li>Dashboard: overall Zeny, inventory value, net worth, and top holdings.</li>
+                <li>Accounts: manage accounts, characters, and global item search.</li>
+                <li>Zeny Vaults: split Zeny across storage types and characters.</li>
+                <li>Item Finder: search by name, type, and category to add items.</li>
+                <li>Inventory: edit quantity, set manual prices, and filter by group.</li>
+                <li>Vending Stalls: track shop items, sales, tax, and net.</li>
+                <li>Quick Import (OCR): paste or upload screenshots to import items.</li>
+              </ul>
+            </div>
+            <div class="guide-block">
+              <h3>Vending Workflow</h3>
+              <ol class="guide-steps">
+                <li>Open Vending Stalls, enter a character name, then click Open Vending.</li>
+                <li>Add items by name, pick a suggestion, and set qty and price.</li>
+                <li>Each stall can hold up to 12 items.</li>
+                <li>Click Sell to log a sale. A 5% tax applies when unit price is above 10,000,000.</li>
+              </ol>
+            </div>
+            <div class="guide-block">
+              <h3>Backups & Reset</h3>
+              <ul class="guide-list">
+                <li>Export downloads <code>ragnarok-ledger.json</code> with all accounts and items.</li>
+                <li>Import restores data from a previous export.</li>
+                <li>Reset wipes everything in the current browser.</li>
+              </ul>
+            </div>
+            <div class="guide-block">
+              <h3>Limits & Notes</h3>
+              <ul class="guide-list">
+                <li>Data is stored in the browser local storage. Export for backups.</li>
+                <li>Setting an inventory quantity to 0 removes the item.</li>
+                <li>Manual price overrides the item value used in totals.</li>
+                <li>OCR works offline, and clearer screenshots improve matches.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
     </main>

@@ -838,6 +838,52 @@ button.danger {
   font-size: 0.95rem;
 }
 
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.guide-block {
+  background: var(--panel-2);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guide-block h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.guide-list,
+.guide-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.guide-list li,
+.guide-steps li {
+  line-height: 1.4;
+}
+
+.guide-panel code {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(216, 178, 110, 0.2);
+  border-radius: 8px;
+  padding: 2px 6px;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1374,6 +1420,10 @@ select:focus {
   }
 
   .overview {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-grid {
     grid-template-columns: 1fr;
   }
 
