@@ -19,6 +19,7 @@ Double‑click `Start Ledger App.html`. It automatically redirects to `apps/acco
 - Vending stalls (max 12 items), sales history, and tax calculation
 - Cross‑account search
 - Loans: track items lent to other players
+- Share codes: send items between apps with a hash
 
 ## How It Works
 - Data is stored in your browser `localStorage`.
@@ -54,6 +55,7 @@ Repo ayarlarından GitHub Pages’i açın ve şu adresi ziyaret edin:
 - Vending tezgahları (max 12 ürün), satış ve vergi hesabı
 - Hesaplar arası arama
 - Borç: başkalarına verilen item’ları takip etme
+- Paylaşım kodu: item listesini hash kod ile paylaşma
 
 ### Veri ve Yedek
 - Veriler tarayıcı `localStorage` içinde saklanır.

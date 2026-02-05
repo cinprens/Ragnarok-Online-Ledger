@@ -15,6 +15,7 @@
         <button class="nav-link" type="button" data-section-link="section-accounts">Accounts</button>
         <button class="nav-link" type="button" data-section-link="section-vending">Vending Stalls</button>
         <button class="nav-link" type="button" data-section-link="section-loans">Loans</button>
+        <button class="nav-link" type="button" data-section-link="section-share">Share Codes</button>
         <button class="nav-link" type="button" data-section-link="section-zeny">Zeny Vaults</button>
         <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
         <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
@@ -176,6 +177,48 @@
         </div>
       </section>
 
+      <section class="section" id="section-share" data-section>
+        <div class="panel share-panel">
+          <div class="panel-header">
+            <h2>Share Codes</h2>
+            <p>Share items with friends using a simple hash code.</p>
+          </div>
+          <div class="share-grid">
+            <div class="share-card">
+              <h3>Create Code</h3>
+              <div class="share-form">
+                <input type="text" id="share-from" placeholder="Your name (optional)">
+                <input type="text" id="share-item" placeholder="Item name...">
+                <input type="number" id="share-qty" min="1" value="1">
+                <input type="text" id="share-price" placeholder="Price (optional)">
+                <input type="text" id="share-note" placeholder="Item note (optional)">
+                <button class="ghost" id="share-add">Add Item</button>
+              </div>
+              <div class="share-suggestions" id="share-suggestions"></div>
+              <div class="share-status" id="share-status"></div>
+              <div class="share-list" id="share-list"></div>
+              <textarea id="share-general-note" rows="3" placeholder="General note (optional)"></textarea>
+              <div class="share-actions">
+                <button class="ghost" id="share-generate">Generate Code</button>
+                <button class="ghost" id="share-copy">Copy</button>
+              </div>
+              <div class="share-meta" id="share-generated-meta"></div>
+              <textarea id="share-code" rows="4" placeholder="Share code will appear here..."></textarea>
+            </div>
+            <div class="share-card">
+              <h3>Use Code</h3>
+              <textarea id="share-import" rows="6" placeholder="Paste a share code here..."></textarea>
+              <div class="share-actions">
+                <button class="ghost" id="share-apply">Preview</button>
+                <button class="ghost" id="share-import-btn">Import Items</button>
+              </div>
+              <div class="share-meta" id="share-meta"></div>
+              <div class="share-preview" id="share-preview"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section" id="section-zeny" data-section>
         <div class="panel">
           <div class="panel-header">
@@ -290,6 +333,7 @@
                 <li>Dashboard: overall Zeny, inventory value, net worth, and top holdings.</li>
                 <li>Accounts: manage accounts, characters, and global item search.</li>
                 <li>Loans: record which items you lent to other players.</li>
+                <li>Share Codes: generate a hash to share items between apps.</li>
                 <li>Zeny Vaults: split Zeny across storage types and characters.</li>
                 <li>Item Finder: search by name, type, and category to add items.</li>
                 <li>Inventory: edit quantity, set manual prices, and filter by group.</li>

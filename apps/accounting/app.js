@@ -2,6 +2,7 @@
 const META = window.ITEMS_META || {};
 const STORAGE_KEY = "rht_accounting_state_v1";
 const SECTION_KEY = "rht_accounting_section";
+const SHARE_DRAFT_KEY = "rht_accounting_share_draft_v1";
 const ZENY_TEMPLATE = { wallet: 0, storage: 0, merchant: 0, bank: 0, other: 0 };
 
 const itemsById = new Map(ITEMS.map(item => [item.id, item]));
@@ -53,6 +54,25 @@ const elements = {
   loanSummary: document.getElementById("loan-summary"),
   loanSuggestions: document.getElementById("loan-suggestions"),
   loanStatus: document.getElementById("loan-status"),
+  shareFrom: document.getElementById("share-from"),
+  shareItem: document.getElementById("share-item"),
+  shareQty: document.getElementById("share-qty"),
+  sharePrice: document.getElementById("share-price"),
+  shareNote: document.getElementById("share-note"),
+  shareGeneralNote: document.getElementById("share-general-note"),
+  shareAdd: document.getElementById("share-add"),
+  shareList: document.getElementById("share-list"),
+  shareSuggestions: document.getElementById("share-suggestions"),
+  shareStatus: document.getElementById("share-status"),
+  shareMeta: document.getElementById("share-meta"),
+  shareGeneratedMeta: document.getElementById("share-generated-meta"),
+  shareGenerate: document.getElementById("share-generate"),
+  shareCopy: document.getElementById("share-copy"),
+  shareCode: document.getElementById("share-code"),
+  shareImport: document.getElementById("share-import"),
+  shareApply: document.getElementById("share-apply"),
+  shareImportBtn: document.getElementById("share-import-btn"),
+  sharePreview: document.getElementById("share-preview"),
   ocrDrop: document.getElementById("ocr-drop"),
   ocrPreview: document.getElementById("ocr-preview"),
   ocrFile: document.getElementById("ocr-file"),
@@ -293,9 +313,11 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+const NUMBER_LOCALE = navigator.language || "en-US";
+
 function formatNumber(value) {
   const num = Number(value) || 0;
-  return num.toLocaleString("en-US");
+  return num.toLocaleString(NUMBER_LOCALE);
 }
 
 function parseNumber(value) {
@@ -314,16 +336,42 @@ function setupNumericInput(input, { allowEmpty = false } = {}) {
   input.inputMode = "numeric";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.addEventListener("focus", () => {
-    input.value = input.value.replace(/[^0-9]/g, "");
-  });
-  input.addEventListener("blur", () => {
-    const cleaned = input.value.replace(/[^0-9]/g, "");
+
+  const formatWithCaret = () => {
+    const raw = input.value;
+    const cursor = input.selectionStart ?? raw.length;
+    const digitsBefore = raw.slice(0, cursor).replace(/[^0-9]/g, "").length;
+    const cleaned = raw.replace(/[^0-9]/g, "");
+
     if (cleaned === "") {
-      input.value = allowEmpty ? "" : "0";
+      if (allowEmpty) {
+        input.value = "";
+        return;
+      }
+      input.value = "0";
+      input.setSelectionRange(1, 1);
       return;
     }
-    input.value = formatNumber(cleaned);
+
+    const formatted = formatNumber(cleaned);
+    input.value = formatted;
+
+    let nextPos = 0;
+    let digitsSeen = 0;
+    while (nextPos < formatted.length && digitsSeen < digitsBefore) {
+      if (/\d/.test(formatted[nextPos])) {
+        digitsSeen += 1;
+      }
+      nextPos += 1;
+    }
+    input.setSelectionRange(nextPos, nextPos);
+  };
+
+  input.addEventListener("input", formatWithCaret);
+  input.addEventListener("blur", () => {
+    if (!input.value && allowEmpty) return;
+    const cleaned = input.value.replace(/[^0-9]/g, "");
+    input.value = cleaned === "" ? (allowEmpty ? "" : "0") : formatNumber(cleaned);
   });
 }
 
@@ -477,6 +525,64 @@ function formatLoanDate(value) {
   return date.toLocaleDateString();
 }
 
+function toBase64Url(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64Url(value) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+const SHARE_CODE_PREFIX = "RKL1.";
+
+function encodeSharePayloadLegacy(payload) {
+  const json = JSON.stringify(payload);
+  const bytes = new TextEncoder().encode(json);
+  return toBase64Url(bytes);
+}
+
+async function encodeSharePayload(payload) {
+  if (!("CompressionStream" in window)) {
+    return encodeSharePayloadLegacy(payload);
+  }
+  const json = JSON.stringify(payload);
+  const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
+  const buffer = await new Response(stream).arrayBuffer();
+  return `${SHARE_CODE_PREFIX}${toBase64Url(new Uint8Array(buffer))}`;
+}
+
+function decodeSharePayloadLegacy(code) {
+  const trimmed = (code || "").trim();
+  if (!trimmed) return null;
+  const bytes = fromBase64Url(trimmed);
+  const json = new TextDecoder().decode(bytes);
+  return JSON.parse(json);
+}
+
+async function decodeSharePayload(code) {
+  const trimmed = (code || "").trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith(SHARE_CODE_PREFIX) || !("DecompressionStream" in window)) {
+    return decodeSharePayloadLegacy(trimmed);
+  }
+  const payload = trimmed.slice(SHARE_CODE_PREFIX.length);
+  const bytes = fromBase64Url(payload);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const buffer = await new Response(stream).arrayBuffer();
+  const json = new TextDecoder().decode(buffer);
+  return JSON.parse(json);
+}
+
 function getBasisPrice(item) {
   if (!item) return 0;
   return 0;
@@ -551,6 +657,13 @@ function classifyItem(item) {
   if (type === "equipment") return "Equipment";
   if (type === "consumable") return "Consumables";
   return "Misc";
+}
+
+function isRefinableItem(item) {
+  const type = (item?.type || "").toLowerCase();
+  if (type === "weapon" || type === "equipment") return true;
+  const category = (item?.category || "").toLowerCase();
+  return category.includes("weapon") || category.includes("armor") || category.includes("equipment");
 }
 
 function getInventoryFilters() {
@@ -1010,7 +1123,7 @@ function applyOcrImport() {
     if (existing) {
       existing.qty = (Number(existing.qty) || 0) + item.qty;
     } else {
-      account.items.push({ id: item.id, qty: item.qty, override: null });
+      account.items.push({ id: item.id, qty: item.qty, override: null, refine: 0 });
     }
   });
   saveState();
@@ -1591,7 +1704,7 @@ function renderVending() {
 
       const accountItem = account.items.find(itemEntry => itemEntry.id === selectedId);
       if (!accountItem) {
-        account.items.push({ id: selectedId, qty, override: null });
+        account.items.push({ id: selectedId, qty, override: null, refine: 0 });
       } else if (accountItem.qty < qty) {
         accountItem.qty = qty;
       }
@@ -1620,6 +1733,230 @@ function renderVending() {
 function setLoanStatus(message = "") {
   if (!elements.loanStatus) return;
   elements.loanStatus.textContent = message;
+}
+
+const shareDraft = {
+  from: "",
+  generalNote: "",
+  items: []
+};
+let shareImportMatches = [];
+let shareImportMeta = null;
+
+function setShareStatus(message = "") {
+  if (!elements.shareStatus) return;
+  elements.shareStatus.textContent = message;
+}
+
+function saveShareDraft() {
+  try {
+    const payload = {
+      from: shareDraft.from || "",
+      generalNote: shareDraft.generalNote || "",
+      items: shareDraft.items.map(entry => ({
+        id: entry.id,
+        name: entry.name,
+        qty: entry.qty,
+        price: entry.price != null ? entry.price : null,
+        note: entry.note || ""
+      }))
+    };
+    localStorage.setItem(SHARE_DRAFT_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function loadShareDraft() {
+  try {
+    const raw = localStorage.getItem(SHARE_DRAFT_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    shareDraft.from = String(parsed?.from || "");
+    shareDraft.generalNote = String(parsed?.generalNote || "");
+    const items = Array.isArray(parsed?.items) ? parsed.items : [];
+    shareDraft.items = items
+      .map((entry) => {
+        const id = Number(entry.id);
+        if (!Number.isFinite(id) || id <= 0) return null;
+        const item = itemsById.get(id);
+        return {
+          id,
+          name: item?.name || entry.name || "Unknown Item",
+          qty: Math.max(1, Number(entry.qty) || 1),
+          price: entry.price != null ? Number(entry.price) : null,
+          note: String(entry.note || "")
+        };
+      })
+      .filter(Boolean);
+  } catch {
+    // ignore invalid data
+  }
+}
+
+function renderShareMeta() {
+  if (!elements.shareMeta) return;
+  elements.shareMeta.innerHTML = "";
+  if (!shareImportMeta) return;
+
+  const from = shareImportMeta.from ? `From: ${shareImportMeta.from}` : "";
+  const note = shareImportMeta.note ? `Note: ${shareImportMeta.note}` : "";
+  const created = shareImportMeta.createdAt ? `Created: ${formatLoanDate(shareImportMeta.createdAt)}` : "";
+
+  const lines = [from, note, created].filter(Boolean);
+  if (!lines.length) return;
+
+  const box = document.createElement("div");
+  box.className = "share-meta-box";
+  lines.forEach((line) => {
+    const row = document.createElement("div");
+    row.textContent = line;
+    box.append(row);
+  });
+  elements.shareMeta.append(box);
+}
+
+function renderShareGeneratedMeta(payload) {
+  if (!elements.shareGeneratedMeta) return;
+  elements.shareGeneratedMeta.innerHTML = "";
+  if (!payload) return;
+  const from = payload.from ? `From: ${payload.from}` : "";
+  const note = payload.note ? `Note: ${payload.note}` : "";
+  if (!from && !note) return;
+  const box = document.createElement("div");
+  box.className = "share-meta-box";
+  if (from) {
+    const row = document.createElement("div");
+    row.textContent = from;
+    box.append(row);
+  }
+  if (note) {
+    const row = document.createElement("div");
+    row.textContent = note;
+    box.append(row);
+  }
+  elements.shareGeneratedMeta.append(box);
+}
+
+function renderShareList() {
+  if (!elements.shareList) return;
+  elements.shareList.innerHTML = "";
+  if (!shareDraft.items.length) {
+    const note = document.createElement("div");
+    note.className = "result-note";
+    note.textContent = "No items added yet.";
+    elements.shareList.append(note);
+    return;
+  }
+
+  shareDraft.items.forEach((entry) => {
+    const item = itemsById.get(entry.id);
+    const name = item?.name || entry.name || "Unknown Item";
+    const row = document.createElement("div");
+    row.className = "share-row";
+
+    const img = document.createElement("img");
+    img.src = getItemIcon(entry.id);
+    img.alt = name;
+
+    const info = document.createElement("div");
+    info.className = "share-info";
+    const title = document.createElement("strong");
+    title.textContent = name;
+    const meta = document.createElement("div");
+    meta.className = "muted";
+    meta.textContent = item?.type || "Unknown";
+    info.append(title, meta);
+    if (entry.note) {
+      const note = document.createElement("div");
+      note.className = "share-item-note";
+      note.textContent = entry.note;
+      info.append(note);
+    }
+
+    const qtyInput = document.createElement("input");
+    qtyInput.type = "number";
+    qtyInput.min = "1";
+    qtyInput.value = entry.qty;
+    qtyInput.addEventListener("input", () => {
+      entry.qty = Math.max(1, Number(qtyInput.value) || 1);
+      qtyInput.value = entry.qty;
+      saveShareDraft();
+    });
+
+    const priceInput = document.createElement("input");
+    priceInput.placeholder = "Price";
+    priceInput.value = entry.price != null ? formatNumber(entry.price) : "";
+    setupNumericInput(priceInput, { allowEmpty: true });
+    priceInput.addEventListener("input", () => {
+      entry.price = parseOptionalNumber(priceInput.value);
+      saveShareDraft();
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "danger";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      shareDraft.items = shareDraft.items.filter(itemEntry => itemEntry !== entry);
+      renderShareList();
+      saveShareDraft();
+    });
+
+    row.append(img, info, qtyInput, priceInput, removeBtn);
+    elements.shareList.append(row);
+  });
+}
+
+function renderSharePreview(list = []) {
+  if (!elements.sharePreview) return;
+  elements.sharePreview.innerHTML = "";
+  if (!list.length) {
+    const note = document.createElement("div");
+    note.className = "result-note";
+    note.textContent = "No items to preview.";
+    elements.sharePreview.append(note);
+    return;
+  }
+
+  list.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "share-preview-row";
+    const item = entry.itemId ? itemsById.get(entry.itemId) : null;
+    const name = item?.name || entry.itemName || "Unknown Item";
+
+    const img = document.createElement("img");
+    img.src = entry.itemId ? getItemIcon(entry.itemId) : getItemIcon(0);
+    img.alt = name;
+
+    const info = document.createElement("div");
+    info.className = "share-info";
+    const title = document.createElement("strong");
+    title.textContent = name;
+    const meta = document.createElement("div");
+    meta.className = "muted";
+    meta.textContent = entry.itemId ? "Matched" : "Unknown";
+    info.append(title, meta);
+    if (entry.note) {
+      const note = document.createElement("div");
+      note.className = "share-item-note";
+      note.textContent = entry.note;
+      info.append(note);
+    }
+
+    const qty = document.createElement("div");
+    qty.className = "value-tag";
+    qty.textContent = `x${entry.qty}`;
+
+    if (entry.price != null) {
+      const price = document.createElement("div");
+      price.className = "value-tag";
+      price.textContent = formatZeny(entry.price);
+      row.append(img, info, qty, price);
+    } else {
+      row.append(img, info, qty);
+    }
+    elements.sharePreview.append(row);
+  });
 }
 
 function renderLoans() {
@@ -1794,7 +2131,7 @@ function addItem(id) {
   if (existing) {
     existing.qty = (Number(existing.qty) || 0) + 1;
   } else {
-    account.items.push({ id, qty: 1, override: null });
+    account.items.push({ id, qty: 1, override: null, refine: 0 });
   }
   saveState();
   renderInventory();
@@ -1861,6 +2198,8 @@ function renderInventory() {
       const displayPrice = entry.override != null ? formatNumber(entry.override) : "";
       const priceValue = entry.override != null ? Number(entry.override) : basePrice;
       const totalValue = priceValue * (Number(entry.qty) || 0);
+      const refinable = isRefinableItem(item);
+      const refineValue = Math.min(10, Math.max(0, Number(entry.refine) || 0));
 
       const row = document.createElement("div");
       row.className = "inventory-item";
@@ -1870,7 +2209,26 @@ function renderInventory() {
       icon.alt = item.name;
 
       const info = document.createElement("div");
-      info.innerHTML = `<strong>${item.name}</strong><div class="muted">${item.type || "Unknown"}${item.category ? ` • ${item.category}` : ""}</div>`;
+      const displayName = refinable && refineValue > 0 ? `+${refineValue} ${item.name}` : item.name;
+      info.innerHTML = `<strong>${displayName}</strong><div class="muted">${item.type || "Unknown"}${item.category ? ` • ${item.category}` : ""}</div>`;
+
+      const refineSelect = document.createElement("select");
+      refineSelect.className = "refine-select";
+      for (let i = 0; i <= 10; i += 1) {
+        const option = document.createElement("option");
+        option.value = String(i);
+        option.textContent = `+${i}`;
+        refineSelect.append(option);
+      }
+      refineSelect.value = String(refineValue);
+      refineSelect.disabled = !refinable;
+      refineSelect.title = refinable ? "Refine level" : "Not refinable";
+      refineSelect.addEventListener("change", () => {
+        if (!refinable) return;
+        entry.refine = Number(refineSelect.value) || 0;
+        saveState();
+        renderInventory();
+      });
 
       const qtyInput = document.createElement("input");
       qtyInput.type = "number";
@@ -1910,7 +2268,7 @@ function renderInventory() {
       removeBtn.textContent = "×";
       removeBtn.addEventListener("click", () => removeItem(entry.id));
 
-      row.append(icon, info, qtyInput, priceInput, valueTag, removeBtn);
+      row.append(icon, info, refineSelect, qtyInput, priceInput, valueTag, removeBtn);
       list.append(row);
     });
 
@@ -2147,6 +2505,222 @@ function attachEvents() {
       elements.loanFilter.addEventListener("change", () => renderLoans());
     }
   }
+  if (elements.shareItem || elements.shareAdd || elements.shareGenerate) {
+    let selectedShareItemId = null;
+
+    const renderShareSuggestions = () => {
+      if (!elements.shareSuggestions || !elements.shareItem) return;
+      elements.shareSuggestions.innerHTML = "";
+      const list = findClosestItems(elements.shareItem.value, 6);
+      list.forEach(suggestion => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "ocr-chip";
+        chip.textContent = suggestion.name;
+        chip.addEventListener("click", () => {
+          elements.shareItem.value = suggestion.name;
+          selectedShareItemId = suggestion.id;
+          renderShareSuggestions();
+        });
+        elements.shareSuggestions.append(chip);
+      });
+    };
+
+    if (elements.shareItem) {
+      elements.shareItem.addEventListener("input", () => {
+        selectedShareItemId = matchLineToItem(elements.shareItem.value);
+        renderShareSuggestions();
+      });
+    }
+
+    if (elements.shareAdd) {
+      elements.shareAdd.addEventListener("click", () => {
+        const rawName = elements.shareItem ? elements.shareItem.value.trim() : "";
+        const qty = Math.max(1, Number(elements.shareQty?.value) || 1);
+        const price = elements.sharePrice ? parseOptionalNumber(elements.sharePrice.value) : null;
+        const itemNote = elements.shareNote ? elements.shareNote.value.trim() : "";
+        if (!rawName) {
+          setShareStatus("Enter an item name.");
+          return;
+        }
+        let itemId = selectedShareItemId || matchLineToItem(rawName);
+        if (!itemId) {
+          setShareStatus("Pick a valid item from suggestions.");
+          return;
+        }
+        const itemName = itemsById.get(itemId)?.name || rawName;
+        const existing = shareDraft.items.find(entry => entry.id === itemId);
+        if (existing) {
+          existing.qty += qty;
+          if (price != null) {
+            existing.price = price;
+          }
+          if (itemNote) {
+            existing.note = itemNote;
+          }
+        } else {
+          shareDraft.items.push({ id: itemId, name: itemName, qty, price, note: itemNote });
+        }
+        setShareStatus("");
+        if (elements.shareItem) elements.shareItem.value = "";
+        if (elements.shareQty) elements.shareQty.value = "1";
+        if (elements.sharePrice) elements.sharePrice.value = "";
+        if (elements.shareNote) elements.shareNote.value = "";
+        selectedShareItemId = null;
+        renderShareSuggestions();
+        renderShareList();
+        saveShareDraft();
+      });
+    }
+
+    if (elements.shareGenerate) {
+      elements.shareGenerate.addEventListener("click", async () => {
+        if (!shareDraft.items.length) {
+          setShareStatus("Add at least one item.");
+          return;
+        }
+        const payload = {
+          v: 1,
+          from: shareDraft.from || (elements.shareFrom ? elements.shareFrom.value.trim() : ""),
+          note: shareDraft.generalNote || (elements.shareGeneralNote ? elements.shareGeneralNote.value.trim() : ""),
+          createdAt: new Date().toISOString(),
+          items: shareDraft.items.map(entry => ({
+            id: entry.id,
+            name: entry.name,
+            qty: entry.qty,
+            price: entry.price != null ? entry.price : null,
+            note: entry.note || ""
+          }))
+        };
+        try {
+          const code = await encodeSharePayload(payload);
+          if (elements.shareCode) {
+            elements.shareCode.value = code;
+          }
+          renderShareGeneratedMeta(payload);
+          setShareStatus("Code generated.");
+        } catch {
+          setShareStatus("Failed to generate code.");
+        }
+      });
+    }
+
+    if (elements.shareCopy) {
+      elements.shareCopy.addEventListener("click", async () => {
+        const code = elements.shareCode ? elements.shareCode.value.trim() : "";
+        if (!code) {
+          setShareStatus("Generate a code first.");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(code);
+          setShareStatus("Copied to clipboard.");
+        } catch {
+          setShareStatus("Copy failed. Select the code and copy manually.");
+        }
+      });
+    }
+
+    if (elements.shareFrom) {
+      elements.shareFrom.addEventListener("input", () => {
+        shareDraft.from = elements.shareFrom.value.trim();
+        saveShareDraft();
+      });
+    }
+
+    if (elements.shareGeneralNote) {
+      elements.shareGeneralNote.addEventListener("input", () => {
+        shareDraft.generalNote = elements.shareGeneralNote.value.trim();
+        saveShareDraft();
+      });
+    }
+
+    if (elements.shareApply) {
+      elements.shareApply.addEventListener("click", async () => {
+        const code = elements.shareImport ? elements.shareImport.value.trim() : "";
+        if (!code) {
+          shareImportMeta = null;
+          renderShareMeta();
+          renderSharePreview([]);
+          return;
+        }
+        try {
+          const payload = await decodeSharePayload(code);
+          if (!payload || !Array.isArray(payload.items)) {
+            setShareStatus("Invalid share code.");
+            shareImportMatches = [];
+            shareImportMeta = null;
+            renderShareMeta();
+            renderSharePreview([]);
+            return;
+          }
+          shareImportMeta = {
+            from: payload.from || "",
+            note: payload.note || "",
+            createdAt: payload.createdAt || ""
+          };
+          shareImportMatches = payload.items.map((entry) => {
+            let itemId = Number(entry.id);
+            if (!Number.isFinite(itemId) || itemId <= 0) itemId = null;
+            if (!itemId && entry.name) {
+              itemId = matchLineToItem(entry.name);
+            }
+            return {
+              itemId,
+              itemName: entry.name || "",
+              qty: Math.max(1, Number(entry.qty) || 1),
+              price: entry.price != null ? Number(entry.price) : null,
+              note: String(entry.note || "")
+            };
+          });
+          renderSharePreview(shareImportMatches);
+          renderShareMeta();
+          setShareStatus("");
+        } catch (error) {
+          shareImportMatches = [];
+          shareImportMeta = null;
+          renderShareMeta();
+          renderSharePreview([]);
+          setShareStatus("Invalid share code.");
+        }
+      });
+    }
+
+    if (elements.shareImportBtn) {
+      elements.shareImportBtn.addEventListener("click", () => {
+        if (!shareImportMatches.length) {
+          setShareStatus("Preview a code first.");
+          return;
+        }
+        const account = getActiveAccount();
+        shareImportMatches.forEach((entry) => {
+          if (!entry.itemId) return;
+          const existing = account.items.find(itemEntry => itemEntry.id === entry.itemId);
+          if (existing) {
+            existing.qty = (Number(existing.qty) || 0) + entry.qty;
+            if (entry.price != null) {
+              existing.override = entry.price;
+            }
+          } else {
+            account.items.push({
+              id: entry.itemId,
+              qty: entry.qty,
+              override: entry.price != null ? entry.price : null,
+              refine: 0
+            });
+          }
+        });
+        saveState();
+        renderInventory();
+        shareImportMeta = null;
+        renderShareMeta();
+        renderSharePreview([]);
+        if (elements.shareImport) elements.shareImport.value = "";
+        shareImportMatches = [];
+        setShareStatus("Items imported.");
+      });
+    }
+  }
   const ocrEnabled = Boolean(elements.ocrDrop || elements.ocrFile || elements.ocrModal);
   if (ocrEnabled) {
     if (elements.ocrFile) {
@@ -2266,11 +2840,15 @@ function init() {
   Object.values(zenyInputs).forEach((input) => setupNumericInput(input));
   if (elements.characterZeny) setupNumericInput(elements.characterZeny, { allowEmpty: true });
   if (elements.zenyCharacterValue) setupNumericInput(elements.zenyCharacterValue);
+  if (elements.sharePrice) setupNumericInput(elements.sharePrice, { allowEmpty: true });
+  loadShareDraft();
   updateZenyInputs();
   renderAccounts();
   renderAccountSelectors();
   renderCharacters();
   renderGlobalSearchResults();
+  if (elements.shareFrom) elements.shareFrom.value = shareDraft.from || "";
+  if (elements.shareGeneralNote) elements.shareGeneralNote.value = shareDraft.generalNote || "";
   if (elements.loanDate && !elements.loanDate.value) {
     elements.loanDate.value = new Date().toISOString().slice(0, 10);
   }
@@ -2287,6 +2865,11 @@ function init() {
   renderSearchResults();
   renderInventory();
   renderLoans();
+  renderShareList();
+  renderShareGeneratedMeta({
+    from: shareDraft.from || "",
+    note: shareDraft.generalNote || ""
+  });
 }
 
 init();

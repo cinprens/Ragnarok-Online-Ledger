@@ -65,7 +65,7 @@ body::after {
   margin: 0 auto;
   padding: 28px 36px 56px;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
   gap: 24px;
   position: relative;
   z-index: 1;
@@ -82,6 +82,8 @@ body::after {
   border: 1px solid rgba(216, 178, 110, 0.3);
   background: rgba(6, 8, 12, 0.6);
   box-shadow: var(--shadow);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
 }
 
 .sidebar-block {
@@ -862,6 +864,118 @@ button.danger {
   flex-wrap: wrap;
 }
 
+.share-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.share-card {
+  background: var(--panel-2);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.share-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.share-form {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 90px 120px 1.4fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.share-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.share-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  min-height: 1em;
+}
+
+.share-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.share-meta-box {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(216, 178, 110, 0.35);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.share-list,
+.share-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.share-row,
+.share-preview-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 90px 120px auto;
+  gap: 12px;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(216, 178, 110, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.share-preview-row {
+  grid-template-columns: 48px 1fr 90px auto;
+}
+
+.share-row img,
+.share-preview-row img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.share-card textarea {
+  width: 100%;
+  background: rgba(7, 8, 9, 0.75);
+  border: 1px solid rgba(216, 178, 110, 0.22);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.share-item-note {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -1448,7 +1562,7 @@ select:focus {
 
 .inventory-item {
   display: grid;
-  grid-template-columns: 56px 1.4fr 130px 140px 160px 32px;
+  grid-template-columns: 56px 1.4fr 80px 120px 140px 160px 32px;
   gap: 10px;
   align-items: center;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
@@ -1467,6 +1581,10 @@ select:focus {
 }
 
 .inventory-item input {
+  width: 100%;
+}
+
+.refine-select {
   width: 100%;
 }
 
@@ -1527,6 +1645,14 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
+  .share-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .share-form {
+    grid-template-columns: 1fr 1fr 90px 120px 1fr auto;
+  }
+
   .loan-form {
     grid-template-columns: 1fr 1fr 90px 140px 1fr auto;
   }
@@ -1536,7 +1662,7 @@ select:focus {
   }
 
   .inventory-item {
-    grid-template-columns: 48px 1fr 120px 120px 100px 32px;
+    grid-template-columns: 48px 1fr 70px 110px 110px 100px 32px;
   }
 }
 
@@ -1614,6 +1740,16 @@ select:focus {
   }
 
   .vending-item-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .share-form {
+    grid-template-columns: 1fr;
+  }
+
+  .share-row,
+  .share-preview-row {
     grid-template-columns: 1fr;
     align-items: start;
   }
