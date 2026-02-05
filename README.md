@@ -8,7 +8,7 @@ Track Ragnarok Online accounts, zeny, inventory, and vending in a single offline
 
 ### Option 1: GitHub Pages (recommended for sharing)
 Enable GitHub Pages in the repository settings, then open:
-`https://<your-username>.github.io/Ragnarok-Online-Ledger/`
+`https://cinprens.github.io/Ragnarok-Online-Ledger/`
 
 ### Option 2: Open the app locally (no server)
 Double‑click `Start Ledger App.html`. It automatically redirects to `apps/accounting/index.html`.
@@ -43,7 +43,7 @@ Tamamen tarayıcı içinde çalışır, kurulum gerekmez.
 
 **Seçenek 1: GitHub Pages (paylaşım için önerilir)**
 Repo ayarlarından GitHub Pages’i açın ve şu adresi ziyaret edin:
-`https://<kullanici-adi>.github.io/Ragnarok-Online-Ledger/`
+`https://cinprens.github.io/Ragnarok-Online-Ledger/`
 
 **Seçenek 2: Yerelden aç (sunucu yok)**
 `Start Ledger App.html` dosyasını çift tıklayın. Otomatik olarak `apps/accounting/index.html` sayfasına yönlendirir.
