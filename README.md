@@ -20,6 +20,7 @@ Double‑click `Start Ledger App.html`. It automatically redirects to `apps/acco
 - Cross‑account search
 - Loans: track items lent to other players
 - Share codes: send items between apps with a hash
+- Backup Center: export, import, and auto-save to file (Chrome/Edge)
 
 ## How It Works
 - Data is stored in your browser `localStorage`.
@@ -56,6 +57,7 @@ Repo ayarlarından GitHub Pages’i açın ve şu adresi ziyaret edin:
 - Hesaplar arası arama
 - Borç: başkalarına verilen item’ları takip etme
 - Paylaşım kodu: item listesini hash kod ile paylaşma
+- Yedek Merkezi: dışa aktar, içe aktar, otomatik dosyaya kaydet (Chrome/Edge)
 
 ### Veri ve Yedek
 - Veriler tarayıcı `localStorage` içinde saklanır.

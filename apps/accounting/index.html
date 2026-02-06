@@ -16,6 +16,7 @@
         <button class="nav-link" type="button" data-section-link="section-vending">Vending Stalls</button>
         <button class="nav-link" type="button" data-section-link="section-loans">Loans</button>
         <button class="nav-link" type="button" data-section-link="section-share">Share Codes</button>
+        <button class="nav-link" type="button" data-section-link="section-backup">Backup Center</button>
         <button class="nav-link" type="button" data-section-link="section-zeny">Zeny Vaults</button>
         <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
         <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
@@ -219,6 +220,40 @@
         </div>
       </section>
 
+      <section class="section" id="section-backup" data-section>
+        <div class="panel backup-panel">
+          <div class="panel-header">
+            <h2>Backup Center</h2>
+            <p>Protect your data with regular backups.</p>
+          </div>
+          <div class="backup-status">
+            <div class="backup-card">
+              <span>Last Backup</span>
+              <strong id="backup-last">Never</strong>
+            </div>
+            <div class="backup-warning" id="backup-warning"></div>
+          </div>
+          <div class="backup-actions">
+            <button class="ghost" id="backup-export">Download Backup</button>
+            <label class="ghost file-btn">
+              Import
+              <input type="file" id="backup-import" accept="application/json">
+            </label>
+          </div>
+          <div class="backup-autosave">
+            <div class="backup-autosave-info">
+              <strong>Always Save to File</strong>
+              <div class="muted">Chrome/Edge only. Keeps a live backup on disk.</div>
+            </div>
+            <div class="backup-autosave-actions">
+              <button class="ghost" id="backup-autosave-enable">Always Save to File</button>
+              <button class="ghost" id="backup-autosave-disable">Disable</button>
+            </div>
+            <div class="backup-autosave-status" id="backup-autosave-status"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="section" id="section-zeny" data-section>
         <div class="panel">
           <div class="panel-header">
@@ -334,6 +369,7 @@
                 <li>Accounts: manage accounts, characters, and global item search.</li>
                 <li>Loans: record which items you lent to other players.</li>
                 <li>Share Codes: generate a hash to share items between apps.</li>
+                <li>Backup Center: export, import, and auto-save your data.</li>
                 <li>Zeny Vaults: split Zeny across storage types and characters.</li>
                 <li>Item Finder: search by name, type, and category to add items.</li>
                 <li>Inventory: edit quantity, set manual prices, and filter by group.</li>

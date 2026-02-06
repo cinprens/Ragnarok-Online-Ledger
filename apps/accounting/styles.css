@@ -976,6 +976,52 @@ button.danger {
   font-size: 0.85rem;
 }
 
+.backup-status {
+  display: grid;
+  gap: 12px;
+}
+
+.backup-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 178, 110, 0.3);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+}
+
+.backup-warning {
+  color: #ffd6a5;
+  font-size: 0.9rem;
+}
+
+.backup-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.backup-autosave {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 178, 110, 0.25);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.backup-autosave-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.backup-autosave-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);

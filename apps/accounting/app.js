@@ -2,6 +2,13 @@
 const META = window.ITEMS_META || {};
 const STORAGE_KEY = "rht_accounting_state_v1";
 const SECTION_KEY = "rht_accounting_section";
+const BACKUP_KEY = "rht_accounting_last_backup_v1";
+const AUTOSAVE_KEY = "rht_accounting_autosave_v1";
+const AUTOSAVE_HANDLE_KEY = "autosave";
+const AUTOSAVE_DB = "rht_accounting_handles_v1";
+const AUTOSAVE_STORE = "handles";
+const AUTOSAVE_DELAY_MS = 800;
+const BACKUP_WARNING_DAYS = 7;
 const SHARE_DRAFT_KEY = "rht_accounting_share_draft_v1";
 const ZENY_TEMPLATE = { wallet: 0, storage: 0, merchant: 0, bank: 0, other: 0 };
 
@@ -73,6 +80,13 @@ const elements = {
   shareApply: document.getElementById("share-apply"),
   shareImportBtn: document.getElementById("share-import-btn"),
   sharePreview: document.getElementById("share-preview"),
+  backupExport: document.getElementById("backup-export"),
+  backupImport: document.getElementById("backup-import"),
+  backupLast: document.getElementById("backup-last"),
+  backupWarning: document.getElementById("backup-warning"),
+  backupAutosaveEnable: document.getElementById("backup-autosave-enable"),
+  backupAutosaveDisable: document.getElementById("backup-autosave-disable"),
+  backupAutosaveStatus: document.getElementById("backup-autosave-status"),
   ocrDrop: document.getElementById("ocr-drop"),
   ocrPreview: document.getElementById("ocr-preview"),
   ocrFile: document.getElementById("ocr-file"),
@@ -311,6 +325,7 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleAutoSave();
 }
 
 const NUMBER_LOCALE = navigator.language || "en-US";
@@ -1742,6 +1757,10 @@ const shareDraft = {
 };
 let shareImportMatches = [];
 let shareImportMeta = null;
+let autosaveEnabled = localStorage.getItem(AUTOSAVE_KEY) === "true";
+let autosaveHandle = null;
+let autosaveTimer = null;
+const autosaveSupported = "showSaveFilePicker" in window && "indexedDB" in window;
 
 function setShareStatus(message = "") {
   if (!elements.shareStatus) return;
@@ -1836,6 +1855,193 @@ function renderShareGeneratedMeta(payload) {
     box.append(row);
   }
   elements.shareGeneratedMeta.append(box);
+}
+
+function openAutoSaveDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(AUTOSAVE_DB, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(AUTOSAVE_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveAutoSaveHandle(handle) {
+  const db = await openAutoSaveDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(AUTOSAVE_STORE, "readwrite");
+    tx.objectStore(AUTOSAVE_STORE).put(handle, AUTOSAVE_HANDLE_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function loadAutoSaveHandle() {
+  const db = await openAutoSaveDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(AUTOSAVE_STORE, "readonly");
+    const request = tx.objectStore(AUTOSAVE_STORE).get(AUTOSAVE_HANDLE_KEY);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function clearAutoSaveHandle() {
+  const db = await openAutoSaveDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(AUTOSAVE_STORE, "readwrite");
+    tx.objectStore(AUTOSAVE_STORE).delete(AUTOSAVE_HANDLE_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function setLastBackup(value) {
+  if (value) {
+    localStorage.setItem(BACKUP_KEY, value);
+  } else {
+    localStorage.removeItem(BACKUP_KEY);
+  }
+  updateBackupStatus();
+}
+
+function getLastBackup() {
+  return localStorage.getItem(BACKUP_KEY) || "";
+}
+
+function updateBackupStatus() {
+  if (elements.backupLast) {
+    const last = getLastBackup();
+    elements.backupLast.textContent = last ? new Date(last).toLocaleString() : "Never";
+  }
+  if (elements.backupWarning) {
+    const last = getLastBackup();
+    if (!last) {
+      elements.backupWarning.textContent = "No backup yet. Export or enable auto-save.";
+      return;
+    }
+    const lastDate = new Date(last);
+    if (Number.isNaN(lastDate.getTime())) {
+      elements.backupWarning.textContent = "";
+      return;
+    }
+    const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    elements.backupWarning.textContent = diffDays >= BACKUP_WARNING_DAYS
+      ? `Last backup is ${diffDays} days old. Consider backing up now.`
+      : "";
+  }
+  if (elements.backupAutosaveStatus) {
+    if (!autosaveSupported) {
+      elements.backupAutosaveStatus.textContent = "Auto-save not supported in this browser.";
+      return;
+    }
+    if (!autosaveEnabled) {
+      elements.backupAutosaveStatus.textContent = "Auto-save is disabled.";
+      return;
+    }
+    elements.backupAutosaveStatus.textContent = "Auto-save is enabled.";
+  }
+}
+
+async function initAutoSave() {
+  if (!autosaveSupported) {
+    autosaveEnabled = false;
+    localStorage.setItem(AUTOSAVE_KEY, "false");
+    updateBackupStatus();
+    return;
+  }
+  if (autosaveEnabled) {
+    try {
+      autosaveHandle = await loadAutoSaveHandle();
+    } catch {
+      autosaveHandle = null;
+    }
+    if (!autosaveHandle) {
+      autosaveEnabled = false;
+      localStorage.setItem(AUTOSAVE_KEY, "false");
+    }
+  }
+  updateBackupStatus();
+}
+
+async function writeAutoSave(payload) {
+  if (!autosaveSupported || !autosaveEnabled || !autosaveHandle) return;
+  let permission = await autosaveHandle.queryPermission({ mode: "readwrite" });
+  if (permission !== "granted") {
+    permission = await autosaveHandle.requestPermission({ mode: "readwrite" });
+  }
+  if (permission !== "granted") {
+    autosaveEnabled = false;
+    localStorage.setItem(AUTOSAVE_KEY, "false");
+    updateBackupStatus();
+    return;
+  }
+  const writable = await autosaveHandle.createWritable();
+  await writable.write(payload);
+  await writable.close();
+  setLastBackup(new Date().toISOString());
+}
+
+function scheduleAutoSave() {
+  if (!autosaveSupported || !autosaveEnabled || !autosaveHandle) return;
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer);
+  }
+  autosaveTimer = setTimeout(async () => {
+    try {
+      const payload = JSON.stringify(state, null, 2);
+      await writeAutoSave(payload);
+    } catch {
+      // ignore autosave errors
+    }
+  }, AUTOSAVE_DELAY_MS);
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ragnarok-ledger.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  setLastBackup(new Date().toISOString());
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const hasAccounts = Array.isArray(parsed.accounts) && parsed.accounts.length;
+      const hasLegacy = parsed.zeny && Array.isArray(parsed.items);
+      if (!hasAccounts && !hasLegacy) return;
+      const next = normalizeState(parsed);
+      state.accounts = next.accounts;
+      state.activeAccountId = next.activeAccountId;
+      state.inventorySearch = next.inventorySearch || "";
+      state.inventoryGroup = next.inventoryGroup || "All";
+      if (next.priceBasis) {
+        state.priceBasis = next.priceBasis;
+      }
+      saveState();
+      updateZenyInputs();
+      renderAccounts();
+      renderAccountSelectors();
+      renderCharacters();
+      if (elements.inventorySearch) {
+        elements.inventorySearch.value = state.inventorySearch || "";
+      }
+      renderInventory();
+      renderLoans();
+    } catch (_) {
+      // ignore invalid file
+    }
+  };
+  reader.readAsText(file);
 }
 
 function renderShareList() {
@@ -2625,6 +2831,7 @@ function attachEvents() {
       elements.shareFrom.addEventListener("input", () => {
         shareDraft.from = elements.shareFrom.value.trim();
         saveShareDraft();
+        renderShareGeneratedMeta({ from: shareDraft.from, note: shareDraft.generalNote });
       });
     }
 
@@ -2632,6 +2839,7 @@ function attachEvents() {
       elements.shareGeneralNote.addEventListener("input", () => {
         shareDraft.generalNote = elements.shareGeneralNote.value.trim();
         saveShareDraft();
+        renderShareGeneratedMeta({ from: shareDraft.from, note: shareDraft.generalNote });
       });
     }
 
@@ -2761,47 +2969,64 @@ function attachEvents() {
     });
   }
   elements.exportBtn.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "ragnarok-ledger.json";
-    a.click();
-    URL.revokeObjectURL(url);
+    exportState();
   });
   elements.importFile.addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(reader.result);
-        const hasAccounts = Array.isArray(parsed.accounts) && parsed.accounts.length;
-        const hasLegacy = parsed.zeny && Array.isArray(parsed.items);
-        if (!hasAccounts && !hasLegacy) return;
-        const next = normalizeState(parsed);
-        state.accounts = next.accounts;
-        state.activeAccountId = next.activeAccountId;
-        state.inventorySearch = next.inventorySearch || "";
-        state.inventoryGroup = next.inventoryGroup || "All";
-        if (next.priceBasis) {
-          state.priceBasis = next.priceBasis;
-        }
-        saveState();
-        updateZenyInputs();
-        renderAccounts();
-        if (elements.inventorySearch) {
-          elements.inventorySearch.value = state.inventorySearch || "";
-        }
-        renderInventory();
-        renderLoans();
-      } catch (_) {
-        // ignore invalid file
-      }
-    };
-    reader.readAsText(file);
+    handleImportFile(file);
     event.target.value = "";
   });
+  if (elements.backupExport) {
+    elements.backupExport.addEventListener("click", () => exportState());
+  }
+  if (elements.backupImport) {
+    elements.backupImport.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      handleImportFile(file);
+      event.target.value = "";
+    });
+  }
+  if (elements.backupAutosaveEnable) {
+    elements.backupAutosaveEnable.addEventListener("click", async () => {
+      if (!autosaveSupported) {
+        if (elements.backupAutosaveStatus) {
+          elements.backupAutosaveStatus.textContent = "Auto-save not supported in this browser.";
+        }
+        return;
+      }
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "ragnarok-ledger.json",
+          types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
+        });
+        autosaveHandle = handle;
+        await saveAutoSaveHandle(handle);
+        autosaveEnabled = true;
+        localStorage.setItem(AUTOSAVE_KEY, "true");
+        updateBackupStatus();
+        await writeAutoSave(JSON.stringify(state, null, 2));
+      } catch {
+        // user cancelled
+      }
+    });
+  }
+  if (elements.backupAutosaveDisable) {
+    elements.backupAutosaveDisable.addEventListener("click", async () => {
+      autosaveEnabled = false;
+      localStorage.setItem(AUTOSAVE_KEY, "false");
+      autosaveHandle = null;
+      if (autosaveSupported) {
+        try {
+          await clearAutoSaveHandle();
+        } catch {
+          // ignore
+        }
+      }
+      updateBackupStatus();
+    });
+  }
   elements.resetBtn.addEventListener("click", () => {
     if (!confirm("Reset all ledger data?")) return;
     const fresh = defaultState();
@@ -2842,6 +3067,7 @@ function init() {
   if (elements.zenyCharacterValue) setupNumericInput(elements.zenyCharacterValue);
   if (elements.sharePrice) setupNumericInput(elements.sharePrice, { allowEmpty: true });
   loadShareDraft();
+  updateBackupStatus();
   updateZenyInputs();
   renderAccounts();
   renderAccountSelectors();
@@ -2870,6 +3096,7 @@ function init() {
     from: shareDraft.from || "",
     note: shareDraft.generalNote || ""
   });
+  initAutoSave().catch(() => updateBackupStatus());
 }
 
 init();
