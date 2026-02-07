@@ -1,4 +1,10 @@
 ﻿# Ragnarok Online Ledger
+<img width="1886" height="889" alt="image" src="https://github.com/user-attachments/assets/1017d00a-6c32-4bf0-b1df-3ef3292e34df" />
+<img width="1886" height="841" alt="image" src="https://github.com/user-attachments/assets/a1fc9e1e-cbf3-4bb9-9c64-25dd6f3b3e50" />
+<img width="1895" height="855" alt="image" src="https://github.com/user-attachments/assets/bc6b8523-9504-40ce-b15a-a605ddbb0c0d" />
+<img width="1861" height="680" alt="image" src="https://github.com/user-attachments/assets/276bf0eb-9c37-4e91-aa19-f2f0377c5db1" />
+
+
 
 Ragnarok Online Ledger is an **offline-first** web app to manage accounts, zeny, inventory, and companion tools in one place.
 
