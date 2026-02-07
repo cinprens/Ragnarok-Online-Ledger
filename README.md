@@ -1,75 +1,156 @@
-﻿# Ragnarok Accounting Ledger
+﻿# Ragnarok Online Ledger
 
-Track Ragnarok Online accounts, zeny, inventory, and vending in a single offline-friendly dashboard.
+Ragnarok Online Ledger is an **offline-first** web app to manage accounts, zeny, inventory, and companion tools in one place.
 
-> The app runs entirely in the browser. No installation required.
-
-## Quick Start
-
-### Option 1: GitHub Pages (recommended for sharing)
-Enable GitHub Pages in the repository settings, then open:
-`https://cinprens.github.io/Ragnarok-Online-Ledger/`
-
-### Option 2: Open the app locally (no server)
-Double‑click `Start Ledger App.html`. It automatically redirects to `apps/accounting/index.html`.
-
-## Features
-- Account and character‑based zeny tracking
-- Inventory management with manual price overrides
-- Vending stalls (max 12 items), sales history, and tax calculation
-- Cross‑account search
-- Loans: track items lent to other players
-- Share codes: send items between apps with a hash
-- Backup Center: export, import, and auto-save to file (Chrome/Edge)
-
-## How It Works
-- Data is stored in your browser `localStorage`.
-- Use `Export` to download a JSON backup.
-- Use `Import` to restore a previous backup.
-
-## Notes
-- Setting an inventory quantity to `0` removes the item.
-- Manual price overrides the item’s value used in totals.
-
-## User Guide
-A full in‑app guide is available under **User Guide** in the left sidebar.
+- Main app: `apps/accounting`
+- Companion apps: `apps/hugel-race`, `apps/mvp-timer`
+- Runtime: browser-based, no central backend required
 
 ---
 
-## Türkçe
+## Quick Start
 
-Bu uygulama, Ragnarok Online hesap/karakter, zeny, envanter ve vending takibini tek ekranda toplar.
-Tamamen tarayıcı içinde çalışır, kurulum gerekmez.
+### Option 1: Local (fastest)
 
-### Hızlı Başlangıç
+1. Open `Start Ledger App.html`.
+2. It redirects automatically to `apps/accounting/index.html`.
 
-**Seçenek 1: GitHub Pages (paylaşım için önerilir)**
-Repo ayarlarından GitHub Pages’i açın ve şu adresi ziyaret edin:
+### Option 2: GitHub Pages
+
+If Pages is enabled:
+
 `https://cinprens.github.io/Ragnarok-Online-Ledger/`
 
-**Seçenek 2: Yerelden aç (sunucu yok)**
-`Start Ledger App.html` dosyasını çift tıklayın. Otomatik olarak `apps/accounting/index.html` sayfasına yönlendirir.
+---
 
-### Özellikler
-- Hesap ve karakter bazlı zeny takibi
-- Envanter yönetimi ve manuel fiyat
-- Vending tezgahları (max 12 ürün), satış ve vergi hesabı
-- Hesaplar arası arama
-- Borç: başkalarına verilen item’ları takip etme
-- Paylaşım kodu: item listesini hash kod ile paylaşma
-- Yedek Merkezi: dışa aktar, içe aktar, otomatik dosyaya kaydet (Chrome/Edge)
+## Core Features
 
-### Veri ve Yedek
-- Veriler tarayıcı `localStorage` içinde saklanır.
-- `Export` ile JSON yedek alın.
-- `Import` ile geri yükleyin.
+### Accounting Ledger
 
-### Notlar
-- Envanterde miktarı `0` yapmak item’i siler.
-- Manuel fiyat toplam hesaplamasını etkiler.
+- Dashboard metrics (zeny, inventory value, net worth)
+- Accounts and character management
+- Zeny Vaults (wallet, storage, merchant, bank, other)
+- Item Finder + Inventory management
+- Vending Stalls (12-item cap, sales + tax logic)
+- Loans (active / returned tracking)
+- Share Codes for item-list exchange
+- Instance Tracker (runs + cooldown table)
+- Backup Center (export/import/auto-save)
 
-### Kullanım Kılavuzu
-Sol menüdeki **User Guide** bölümünde ayrıntılı kılavuz bulunur.
+### Hugel Race
+
+- Single / Double mode
+- Bet/result entry and validation
+- Win rate, streaks, archive/journal analytics
+- Embedded view inside Ledger + open in new tab
+
+### MVP Timer
+
+- MVP spawn countdown management
+- Tomb-time based calculations
+- Server Time Zone selector
+- Server clock + local clock display
+- Tomb auto-calc when HH:MM is entered
+
+---
+
+## Data Storage and Privacy
+
+This project does **not** store your data on a central server.
+
+- Main state is saved in browser `localStorage`
+- Export creates `ragnarok-ledger.json`
+- Import restores from previous exports
+- Optional auto-save writes to your chosen local file (Chrome/Edge)
+
+Important:
+
+- If browser site data is cleared, `localStorage` data may be lost.
+- Keep regular backups.
+
+---
+
+## Sponsorship Data Protection
+
+To protect your sponsorship information:
+
+### What this app does NOT do
+
+- Does not fetch sponsor lists from GitHub Sponsors API
+- Does not collect sponsor payment/tier data automatically
+- Does not send sponsor analytics/telemetry to external services
+
+### What this app does
+
+- Stores only what you manually enter in app fields
+- Includes manually entered data in backups only if you type it
+
+### Recommended security practice
+
+- Do not store sensitive sponsor/payment notes inside app notes
+- Do not publish backup JSON files publicly
+- Keep backups in encrypted archives if sensitive
+- Track sponsor-financial details in a separate secure document/system
+
+---
+
+## MVP Timer: Correct Server-Time Workflow
+
+1. Select an MVP.
+2. Set `Server Time Zone` to your game server timezone.
+3. Compare `Server` and `Local` clocks at the top.
+4. Enter tomb time as `HH:MM` (optional `SS`).
+5. Timer recalculates immediately using server time.
+
+Note:
+
+- Changing timezone recalculates active tomb-based timers.
+
+---
+
+## Backup Strategy (Recommended)
+
+1. Export before major edits.
+2. Keep at least one weekly offline backup.
+3. Keep monthly archive snapshots.
+4. Keep a second copy before large imports/resets.
+
+Suggested naming:
+
+`ledger-backup-YYYY-MM-DD.json`
+
+---
+
+## Troubleshooting
+
+### Embedded app looks blank or stale
+
+- Open once via `Open in new tab`
+- Hard refresh with `Ctrl + F5`
+
+### Data appears missing
+
+- Verify correct browser profile/device
+- Restore from latest export with `Import`
+
+### Auto-save unavailable
+
+- Feature is browser-dependent (best on Chrome/Edge)
+- Re-check file permission prompt and selected file handle
+
+---
+
+## Project Structure
+
+```text
+.
+|- Start Ledger App.html
+|- apps/
+|  |- accounting/
+|  |- hugel-race/
+|  |- mvp-timer/
+|- README.md
+```
 
 ---
 
@@ -82,7 +163,7 @@ If you find this project useful, consider sponsoring on GitHub to help keep it m
 | Tier | Price | Description |
 | --- | --- | --- |
 | ![PORING](https://github.com/user-attachments/assets/535df144-2c45-4e66-9f40-be56fbc377c7) *Poring Tier* | **$1/month** | Light support tier. Adds a bit of charm with fun Poring-style content. Small, cute, and appreciated. |
-| ![DROPS](https://github.com/user-attachments/assets/229ef95e-ccb8-437b-9f25-85efb8789402) **Drops Tier** | **$3/month** | Monster drop visuals & loot-inspired additions. A little flair goes a long way. |
+| ![DROPS](https://github.com/user-attachments/assets/229ef95e-ccb8-437b-9f25-85efb8789402) **Drops Tier** | **$3/month** | Monster drop visuals and loot-inspired additions. A little flair goes a long way. |
 | ![POPORING](https://github.com/user-attachments/assets/c4d6314d-f442-4579-86ce-a1f8205c482b) ***Poporing Tier*** | **$7/month** | For those who want to brighten things up with wobbly charm. Slightly more playful. |
 
 > Thanks to every supporter who helps keep this alive. Even small porings matter.
@@ -95,6 +176,10 @@ If you find this project useful, consider sponsoring on GitHub to help keep it m
 
 ---
 
-## Screenshot
+## Contribution
 
-<img width="1887" height="902" alt="Ragnarok Accounting Ledger" src="https://github.com/user-attachments/assets/bac0fc37-e20c-47d5-9485-deb5bd3552c7" />
+Issues and PRs are welcome.
+
+If you want to support maintenance directly:
+
+[GitHub Sponsors](https://github.com/sponsors/cinprens)
