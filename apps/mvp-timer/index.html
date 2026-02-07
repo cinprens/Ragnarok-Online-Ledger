@@ -1,0 +1,152 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ragnarok MVP Timer</title>
+<link rel="stylesheet" href="style.css?v=20260207i">
+</head>
+<body>
+<!-- Background image ./Backgrounds/ragnarok_bg.png -->
+
+<div id="scale-wrapper">
+<div id="wrapper">
+  <div id="left">
+    <button class="scroll-up" data-target="positiveList">▲</button>
+    <ul id="positiveList"></ul>
+    <button class="scroll-down" data-target="positiveList">▼</button>
+  </div>
+
+  <div class="resizer" data-side="left"></div>
+
+  <div id="mid">
+    <div id="mid-panel">
+      <div class="server-clock-wrap">
+        <div class="server-clock-row">
+          <div id="currentTime" title="Server time"></div>
+          <div id="localTime" title="Local time"></div>
+        </div>
+        <div class="server-timezone-row">
+          <label for="tzSelect">Server Time Zone</label>
+          <select id="tzSelect"></select>
+          <div id="currentTZ"></div>
+        </div>
+      </div>
+
+      <div class="mvp-stack">
+        <div id="mvpName" class="mvp-name"></div>
+        <img  id="mvpGif" class="mvp-sprite" alt="">
+        <div id="timerBox">
+          <div id="mvpTime" class="timer"></div>
+        </div>
+        <div class="timer-row">
+          <div class="option-timer">
+          <div class="box-title">Optional Timer 🕒 (Minutes / Seconds)</div>
+            <div id="controls">
+              <div class="time-inputs">
+                <input id="minInput" type="number" placeholder="min" min="0">
+                <input id="secInput" type="number" placeholder="sec" min="0" max="59">
+              </div>
+              <div class="btn-group">
+                <button id="setBtn">Set</button>
+                <button id="startBtn">Start</button>
+                <button id="stopBtn">Stop</button>
+              </div>
+            </div>
+          </div>
+          <img  id="mvpMap" class="mvp-map"   alt="">
+          <div class="tomb-time">
+            <div class="box-title">Tomb Time 🪦 (Hour / Minute / Second)</div>
+            <div class="tomb-hint">Auto-calculates as soon as you enter HH:MM (server time).</div>
+            <div id="tombForm">
+              <div class="time-inputs">
+                <input id="tombHour" type="number" placeholder="hh" min="0" max="23">
+                <input id="tombMin"  type="number" placeholder="mm" min="0" max="59">
+                <input id="tombSec"  type="number" placeholder="ss" min="0" max="59">
+              </div>
+              <div class="btn-group">
+                <button id="tombBtn">Tomb</button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /.timer-row -->
+        <div id="mapName"></div>
+      </div><!-- /.mvp-stack -->
+      <div id="midActions" class="control-bar hidden">
+        <div class="btn-row">
+          <button id="startSel">▶️ Start</button>
+          <button id="stopSel">⏸️ Stop</button>
+          <button id="resetSel">🔄 Reset</button>
+          <button id="resetTimersBtn">🧹 Reset All</button>
+        </div>
+        <button id="killBtn">☠️ I KILL</button>
+      </div>
+    </div><!-- /#mid-panel -->
+    <div class="v-resizer"></div>
+  </div><!-- /#mid -->
+
+  <div class="resizer" data-side="right"></div>
+
+  <!-- NEGATİF / SÜRESİ DOLAN SAYAÇLAR -->
+  <div id="right">
+    <button class="scroll-up" data-target="negativeList">▲</button>
+    <ul id="negativeList"></ul>
+    <button class="scroll-down" data-target="negativeList">▼</button>
+  </div>
+
+  <!-- MVP Rank panel -->
+  <div id="killsWrapper">
+    <h3 id="killsTitle">MVP Rank (0)</h3>
+    <button id="rankResetBtn">Reset</button>
+    <div id="killsPanel"></div>
+  </div>
+</div><!-- /wrapper -->
+
+<script>
+function savePanelWidths(){
+  const lw=getComputedStyle(document.documentElement).getPropertyValue('--left-w');
+  const rw=getComputedStyle(document.documentElement).getPropertyValue('--right-w');
+  try {
+    localStorage.setItem('leftWidth',lw);
+    localStorage.setItem('rightWidth',rw);
+  } catch (_) {}
+}
+function loadPanelWidths(){
+  let lw=null;
+  let rw=null;
+  try {
+    lw=localStorage.getItem('leftWidth');
+    rw=localStorage.getItem('rightWidth');
+  } catch (_) {}
+  if(lw)document.documentElement.style.setProperty('--left-w',lw);
+  if(rw)document.documentElement.style.setProperty('--right-w',rw);
+}
+function savePanelHeights(){
+  const st=getComputedStyle(document.documentElement);
+  const mh=st.getPropertyValue('--mid-h');
+  const kh=st.getPropertyValue('--kills-h');
+  try {
+    localStorage.setItem('midHeight',mh);
+    localStorage.setItem('killsHeight',kh);
+  } catch (_) {}
+}
+function loadPanelHeights(){
+  let mh=null;
+  let kh=null;
+  try {
+    mh=localStorage.getItem('midHeight');
+    kh=localStorage.getItem('killsHeight');
+  } catch (_) {}
+  if(mh)document.documentElement.style.setProperty('--mid-h',mh);
+  if(kh)document.documentElement.style.setProperty('--kills-h',kh);
+}
+document.addEventListener('DOMContentLoaded',()=>{loadPanelWidths();loadPanelHeights();});
+</script>
+
+</div><!-- /scale-wrapper -->
+
+  <script src="mvpData.js?v=20260207h"></script>
+  <script src="app.js?v=20260207h"></script>
+</body>
+</html>
+
+

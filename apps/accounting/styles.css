@@ -864,6 +864,164 @@ button.danger {
   flex-wrap: wrap;
 }
 
+.instance-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.instance-stat {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(216, 178, 110, 0.25);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  display: grid;
+  gap: 6px;
+}
+
+.instance-stat span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.instance-stat strong {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+
+.instance-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 14px;
+}
+
+.instance-card {
+  background: var(--panel-2);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.instance-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.instance-character-add {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.instance-character-list {
+  display: grid;
+  gap: 8px;
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.instance-character-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.instance-character-row button {
+  padding: 6px 10px;
+}
+
+.instance-run-form {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 110px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.instance-run-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  min-height: 1em;
+}
+
+.instance-toolbar {
+  display: grid;
+  grid-template-columns: 220px 170px 190px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.instance-table-wrap {
+  border: 1px solid rgba(216, 178, 110, 0.22);
+  border-radius: 14px;
+  overflow: auto;
+  max-height: 560px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.instance-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1040px;
+}
+
+.instance-table th,
+.instance-table td {
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.88rem;
+  vertical-align: top;
+}
+
+.instance-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(11, 14, 18, 0.96);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.instance-note {
+  color: var(--muted);
+}
+
+.instance-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 14px 10px;
+}
+
+.instance-state-ready {
+  background: rgba(98, 224, 194, 0.08);
+}
+
+.instance-state-cooldown {
+  background: rgba(216, 178, 110, 0.08);
+}
+
+.instance-state-calendar {
+  background: rgba(108, 141, 255, 0.08);
+}
+
+.instance-state-unknown {
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .share-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1102,6 +1260,27 @@ button.danger {
   font-size: 0.95rem;
 }
 
+.app-signature {
+  text-align: center;
+  padding: 0 16px 20px;
+  color: var(--muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.app-signature-name {
+  font-size: 0.92rem;
+}
+
+.app-signature-note {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  opacity: 0.86;
+}
+
 .guide-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1146,6 +1325,32 @@ button.danger {
   padding: 2px 6px;
   color: var(--ink);
   font-size: 0.9rem;
+}
+
+.external-app-panel {
+  gap: 12px;
+}
+
+.external-app-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.external-open-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+}
+
+.embedded-app-frame {
+  width: 100%;
+  min-height: 78vh;
+  border: 1px solid rgba(216, 178, 110, 0.28);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .field-grid {
@@ -1699,12 +1904,28 @@ select:focus {
     grid-template-columns: 1fr 1fr 90px 120px 1fr auto;
   }
 
+  .instance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .instance-run-form {
+    grid-template-columns: 1fr 1fr 110px 1fr auto;
+  }
+
+  .instance-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .loan-form {
     grid-template-columns: 1fr 1fr 90px 140px 1fr auto;
   }
 
   .guide-grid {
     grid-template-columns: 1fr;
+  }
+
+  .embedded-app-frame {
+    min-height: 70vh;
   }
 
   .inventory-item {
@@ -1767,6 +1988,13 @@ select:focus {
 
   .character-add,
   .character-row {
+    grid-template-columns: 1fr;
+  }
+
+  .instance-character-add,
+  .instance-character-row,
+  .instance-run-form,
+  .instance-toolbar {
     grid-template-columns: 1fr;
   }
 

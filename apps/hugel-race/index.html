@@ -1,0 +1,310 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RO Hugel Streamer Pro (Probability Ed.)</title>
+    <link rel="stylesheet" href="styles.css?v=20260207i">
+</head>
+<body>
+
+<div class="app-shell">
+    <div class="top-bar">
+        <div class="nav-group">
+            <button class="nav-btn active" id="nav-main" onclick="showPage('main')" data-i18n="nav.main"></button>
+            <button class="nav-btn" id="nav-characters" onclick="showPage('characters')" data-i18n="nav.characters"></button>
+            <button class="nav-btn" id="nav-journal" onclick="showPage('journal')" data-i18n="nav.archive"></button>
+        </div>
+        <div class="top-actions">
+            <button class="journal-btn" onclick="undo()" data-i18n="button.undo"></button>
+        </div>
+    </div>
+
+    <div id="page-main" class="page active">
+        <div class="layout-grid">
+
+    <div class="game-section">
+        <div class="header-btn-group">
+            <button class="mode-btn active" id="btn-single" type="button">Single Mode</button>
+            <button class="mode-btn" id="btn-double" type="button">Double Mode</button>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <div style="color:var(--kick-green); font-weight:900; margin-bottom:10px; letter-spacing:1px;" data-i18n="step.bet"></div>
+            <div class="grid-3" id="bet-grid"></div>
+        </div>
+
+        <div>
+            <div style="color:#666; font-weight:900; margin-bottom:10px; letter-spacing:1px;" data-i18n="step.result"></div>
+            <div class="grid-3" id="res-grid"></div>
+        </div>
+
+        <button class="action-btn" onclick="submitRound()" data-i18n="button.process"></button>
+        <div id="status-text" style="text-align:center; margin-top:15px; color:#555; font-size:0.9rem;" data-i18n="status.waiting"></div>
+
+        <div class="panel top-pairs-panel">
+            <div class="top-pairs-header">
+                <h3 data-i18n="panel.topPairsToday"></h3>
+                <span id="top-pairs-date" class="top-pairs-date"></span>
+            </div>
+            <div id="top-pairs-list" class="top-pairs-list"></div>
+            <div id="top-pairs-empty" class="top-pairs-empty" data-i18n="text.noTopPairs" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div class="stats-tower">
+
+        <div class="panel" style="border-top:3px solid var(--kick-green);">
+            <h3 data-i18n="panel.cash"></h3>
+            <div class="scoreboard">
+                <div class="cash-top">
+                    <div class="total-medals" id="ui-medals">0</div>
+                    <div class="cash-label" data-i18n="label.totalMedals"></div>
+                </div>
+
+                <div class="cash-grid">
+                    <div class="cash-card">
+                        <span data-i18n="label.spent"></span>
+                        <b id="ui-zeny">0z</b>
+                    </div>
+                    <div class="cash-card">
+                        <span data-i18n="label.winRate"></span>
+                        <b id="ui-winrate">%0.0</b>
+                    </div>
+                    <div class="cash-card">
+                        <span data-i18n="label.entrySummary"></span>
+                        <b id="ui-entry-summary">0</b>
+                    </div>
+                    <div class="cash-card">
+                        <span data-i18n="label.rewardCount"></span>
+                        <b id="ui-reward-count">0</b>
+                    </div>
+                    <div class="cash-card">
+                        <span data-i18n="label.totalEarnedMedals"></span>
+                        <b id="ui-earned-medals">0</b>
+                    </div>
+                </div>
+
+                <div class="cash-status">
+                    <div class="cash-status-title" data-i18n="label.status"></div>
+                    <div class="cash-status-grid">
+                        <div>
+                            <span data-i18n="label.totalRounds"></span>
+                            <b id="ui-rounds">0</b>
+                        </div>
+                        <div>
+                            <span data-i18n="label.totalWins"></span>
+                            <b id="ui-wins">0</b>
+                        </div>
+                        <div>
+                            <span data-i18n="label.totalLosses"></span>
+                            <b id="ui-losses">0</b>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 data-i18n="panel.todaySummary"></h3>
+            <div class="today-grid">
+                <div class="today-card">
+                    <span data-i18n="label.todayWins"></span>
+                    <b id="ui-today-wins">0</b>
+                </div>
+                <div class="today-card">
+                    <span data-i18n="label.todayMedals"></span>
+                    <b id="ui-today-medals">0</b>
+                </div>
+                <div class="today-card">
+                    <span data-i18n="label.todayRewards"></span>
+                    <b id="ui-today-rewards">0</b>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 data-i18n="panel.manualMedals"></h3>
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                <input type="number" id="extraMedalsInput" value="0" style="flex:1; background:#000; border:1px solid #333; color:#fff; padding:8px; width:100%;">
+                <button class="journal-btn" onclick="addExtraMedals()" data-i18n="button.add"></button>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#9a9a9a;">
+                <span data-i18n="label.totalManual"></span>
+                <b id="ui-extra-medals" style="color:#fff;">0</b>
+            </div>
+            <div style="margin-top:6px; text-align:right;">
+                <button class="journal-btn" onclick="resetExtraMedals()" data-i18n="button.reset"></button>
+            </div>
+        </div>
+
+        <div id="raw-alert" class="raw-warning" data-i18n="alert.raw"></div>
+
+        <div class="panel">
+            <h3 data-i18n="panel.phenomenon"></h3>
+            <div id="phenomenon-list" class="phenomenon-list"></div>
+        </div>
+
+        <div class="panel" style="opacity:0.4; transition:0.3s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">
+            <h3 data-i18n="panel.settings"></h3>
+            <div class="settings-grid">
+                <label>
+                    <span data-i18n="label.entryCount"></span>
+                    <input type="number" id="entryCount" oninput="handleConfigInput('entryCount', this.value)">
+                </label>
+                <div class="settings-static">
+                    <span data-i18n="label.entryCostFixed"></span>
+                    <strong>2000z</strong>
+                </div>
+                <label>
+                    <span data-i18n="label.medalsPerWin"></span>
+                    <input type="number" id="medalsPerWin" oninput="handleConfigInput('medalsPerWin', this.value)">
+                </label>
+                <label>
+                    <span data-i18n="label.rewardCostMedals"></span>
+                    <input type="number" id="rewardCostMedals" oninput="handleConfigInput('rewardCostMedals', this.value)">
+                </label>
+            </div>
+            <button onclick="resetConfig()" style="width:100%; background:#222; border:none; color:#d63031; font-size:0.7rem; cursor:pointer; padding:5px;" data-i18n="button.resetAll"></button>
+        </div>
+
+        </div>
+    </div>
+    </div>
+
+    <div id="page-characters" class="page">
+        <div class="layout-grid characters-page-grid">
+            <div class="characters-page-left">
+                <div class="panel">
+                    <h3 data-i18n="panel.characters"></h3>
+                    <div class="character-toolbar">
+                        <button class="character-add-btn" onclick="openAddCharacterModal()" data-i18n="button.addCharacter"></button>
+                    </div>
+                    <div class="character-grid" id="character-grid"></div>
+                </div>
+            </div>
+            <div class="characters-page-right">
+                <div class="panel">
+                    <h3 data-i18n="panel.charactersSummary"></h3>
+                    <div class="character-summary" id="character-summary"></div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.rewardSpend"></h3>
+                    <div style="display:grid; gap:8px;">
+                        <div style="color:#9a9a9a; font-size:0.75rem;" data-i18n="text.spendRewardsHint"></div>
+                        <button class="journal-btn" onclick="spendRewardsFromCharacters()" data-i18n="button.spendRewards"></button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.charactersInfo"></h3>
+                    <div class="character-info" id="character-info"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="character-add-modal" class="character-modal">
+        <div class="character-modal-backdrop" onclick="closeAddCharacterModal()"></div>
+        <div class="character-modal-card">
+            <div class="character-modal-title" data-i18n="modal.addCharacterTitle"></div>
+            <div class="character-modal-hint" data-i18n="modal.addCharacterHint"></div>
+            <label>
+                <span data-i18n="label.characterName"></span>
+                <input id="character-add-name" class="character-input" type="text">
+            </label>
+            <label>
+                <span data-i18n="label.characterMedals"></span>
+                <input id="character-add-medals" class="character-input" type="number" min="0" value="0">
+            </label>
+            <label>
+                <span data-i18n="label.characterZeny"></span>
+                <input id="character-add-zeny" class="character-input" type="number" min="0" value="0">
+            </label>
+            <div class="character-modal-actions">
+                <button class="character-modal-btn ghost" onclick="closeAddCharacterModal()" data-i18n="button.cancel"></button>
+                <button class="character-modal-btn" onclick="submitAddCharacter()" data-i18n="button.save"></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-journal" class="page">
+        <div class="layout-grid journal-page-grid">
+            <div class="journal-page-left">
+            <div class="panel">
+                <h3 data-i18n="panel.archiveControl"></h3>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                        <button class="journal-btn" onclick="startJournalComputation()" data-i18n="button.compute"></button>
+                        <button class="journal-btn" onclick="renderJournal(true)" data-i18n="button.list"></button>
+                        <button class="journal-btn" onclick="triggerImport()" data-i18n="button.importHistory"></button>
+                        <input id="importHistoryFile" type="file" accept=".json,application/json" style="display:none" onchange="handleImportFile(event)">
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px;">
+                        <button class="journal-btn" onclick="downloadJournal('csv')" data-i18n="button.downloadCsv"></button>
+                        <button class="journal-btn" onclick="downloadJournal('json')" data-i18n="button.downloadJson"></button>
+                        <button class="journal-btn" onclick="copyJournalJson()" data-i18n="button.copyJson"></button>
+                        <button class="journal-btn" onclick="clearJournal()" data-i18n="button.clearArchive"></button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.errorLog"></h3>
+                    <div id="journal-error-list" class="journal-long-list"></div>
+                    <div id="journal-error-empty" class="journal-empty" style="display:none;" data-i18n="text.noErrors"></div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.allRecords"></h3>
+                    <div class="journal-long-meta">
+                        <span data-i18n="label.total"></span>
+                        <b id="journal-total-count">0</b>
+                    </div>
+                    <div id="journal-full-list" class="journal-long-list"></div>
+                    <div id="journal-full-empty" class="journal-empty" style="display:none;" data-i18n="text.noRecords"></div>
+                </div>
+                <div class="panel">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 data-i18n="panel.last20"></h3>
+                        <span style="font-size:0.7rem; cursor:pointer; color:var(--danger)" onclick="undo()" data-i18n="button.undo"></span>
+                    </div>
+                    <div style="max-height:300px; overflow-y:auto;">
+                        <table class="log-table">
+                            <tbody id="history-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="journal-page-right">
+                <div class="panel">
+                    <h3 data-i18n="panel.selected"></h3>
+                    <div id="journal-detail-page" class="journal-detail-card"></div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.summary"></h3>
+                    <div id="journal-summary-page" class="journal-detail-card"></div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.dailyStats"></h3>
+                    <div id="journal-daily-list" class="daily-list"></div>
+                    <div id="journal-daily-empty" class="journal-empty" style="display:none;" data-i18n="text.noDailyStats"></div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.streaksProb"></h3>
+                    <div id="streak-list-journal">
+                        <div style="text-align:center; color:#444; font-size:0.8rem;" data-i18n="text.noActiveStreak"></div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.topProb"></h3>
+                    <div id="probability-leaderboard" class="leaderboard-list"></div>
+                </div>
+                <div class="panel">
+                    <h3 data-i18n="panel.top3"></h3>
+                    <div id="leaderboard-list" class="leaderboard-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <script src="app.js?v=20260207i" defer></script>
+</body>
+</html>
+
+

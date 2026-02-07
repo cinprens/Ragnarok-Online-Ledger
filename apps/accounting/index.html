@@ -14,12 +14,15 @@
         <button class="nav-link is-active" type="button" data-section-link="section-dashboard">Dashboard</button>
         <button class="nav-link" type="button" data-section-link="section-accounts">Accounts</button>
         <button class="nav-link" type="button" data-section-link="section-vending">Vending Stalls</button>
+        <button class="nav-link" type="button" data-section-link="section-instances">Instance Tracker</button>
         <button class="nav-link" type="button" data-section-link="section-loans">Loans</button>
         <button class="nav-link" type="button" data-section-link="section-share">Share Codes</button>
         <button class="nav-link" type="button" data-section-link="section-backup">Backup Center</button>
         <button class="nav-link" type="button" data-section-link="section-zeny">Zeny Vaults</button>
         <button class="nav-link" type="button" data-section-link="section-finder">Item Finder</button>
         <button class="nav-link" type="button" data-section-link="section-inventory">Inventory</button>
+        <button class="nav-link" type="button" data-section-link="section-hugel-race">Hugel Race</button>
+        <button class="nav-link" type="button" data-section-link="section-mvp-timer">MVP Timer</button>
         <button class="nav-link" type="button" data-section-link="section-guide">User Guide</button>
       </nav>
       <div class="sidebar-block">
@@ -147,6 +150,87 @@
             <button class="ghost" id="vending-open">Open Vending</button>
           </div>
           <div class="vending-list" id="vending-list"></div>
+        </div>
+      </section>
+
+      <section class="section" id="section-instances" data-section>
+        <div class="panel instance-panel">
+          <div class="panel-header">
+            <h2>Instance Tracker</h2>
+            <p>Track runs, loot, and cooldowns for 12+ characters from iRO Wiki instances.</p>
+          </div>
+
+          <div class="instance-stats">
+            <div class="instance-stat">
+              <span>Tracker Characters</span>
+              <strong id="instance-summary-chars">0</strong>
+            </div>
+            <div class="instance-stat">
+              <span>Tracked Runs</span>
+              <strong id="instance-summary-runs">0</strong>
+            </div>
+            <div class="instance-stat">
+              <span>Ready Again</span>
+              <strong id="instance-summary-ready">0</strong>
+            </div>
+          </div>
+
+          <div class="instance-grid">
+            <div class="instance-card">
+              <h3>Characters</h3>
+              <div class="instance-character-add">
+                <input type="text" id="instance-character-name" placeholder="Character name">
+                <button class="ghost" id="instance-character-add">Add Character</button>
+              </div>
+              <div class="instance-character-list" id="instance-character-list"></div>
+            </div>
+            <div class="instance-card">
+              <h3>Record Run</h3>
+              <div class="instance-run-form">
+                <select id="instance-character-select"></select>
+                <select id="instance-instance-select"></select>
+                <input type="text" id="instance-loot" placeholder="Loot qty">
+                <input type="text" id="instance-note" placeholder="Note (optional)">
+                <button class="ghost" id="instance-run-add">Mark Done</button>
+              </div>
+              <div class="instance-run-status" id="instance-run-status"></div>
+            </div>
+          </div>
+
+          <div class="instance-toolbar">
+            <select id="instance-view-character"></select>
+            <select id="instance-filter-state">
+              <option value="all">All States</option>
+              <option value="ready">Ready</option>
+              <option value="cooldown">On Cooldown</option>
+              <option value="calendar">Calendar Based</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <select id="instance-filter-category">
+              <option value="all">All Categories</option>
+            </select>
+            <input type="text" id="instance-search" placeholder="Search instance name...">
+          </div>
+
+          <div class="instance-table-wrap">
+            <table class="instance-table">
+              <thead>
+                <tr>
+                  <th>Character</th>
+                  <th>Instance</th>
+                  <th>Category</th>
+                  <th>Cooldown</th>
+                  <th>Remaining</th>
+                  <th>Last Run</th>
+                  <th>Last Loot</th>
+                  <th>Total Loot</th>
+                  <th>Runs</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody id="instance-table-body"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -344,6 +428,42 @@
         </div>
       </section>
 
+      <section class="section" id="section-hugel-race" data-section>
+        <div class="panel external-app-panel">
+          <div class="panel-header">
+            <h2>Hugel Race Calculator</h2>
+            <p>Integrated as a separate category inside Ledger.</p>
+          </div>
+          <div class="external-app-actions">
+            <a class="external-open-link" href="../hugel-race/index.html?v=20260207i" target="_blank" rel="noopener noreferrer">Open in new tab</a>
+          </div>
+          <iframe
+            class="embedded-app-frame"
+            src="../hugel-race/index.html?v=20260207i"
+            title="Hugel Race Calculator"
+            loading="lazy">
+          </iframe>
+        </div>
+      </section>
+
+      <section class="section" id="section-mvp-timer" data-section>
+        <div class="panel external-app-panel">
+          <div class="panel-header">
+            <h2>Ragnarok MVP Timer</h2>
+            <p>Integrated as a separate category inside Ledger.</p>
+          </div>
+          <div class="external-app-actions">
+            <a class="external-open-link" href="../mvp-timer/index.html?v=20260207i" target="_blank" rel="noopener noreferrer">Open in new tab</a>
+          </div>
+          <iframe
+            class="embedded-app-frame"
+            src="../mvp-timer/index.html?v=20260207i"
+            title="Ragnarok MVP Timer"
+            loading="lazy">
+          </iframe>
+        </div>
+      </section>
+
       <section class="section" id="section-guide" data-section>
         <div class="panel guide-panel">
           <div class="panel-header">
@@ -360,6 +480,7 @@
                 <li>Use Item Finder to search items and click Add.</li>
                 <li>In Inventory, adjust quantities and set Manual price if needed.</li>
                 <li>Check Dashboard for totals and export a backup.</li>
+                <li>Use Hugel Race and MVP Timer from the left menu as companion tools.</li>
               </ol>
             </div>
             <div class="guide-block">
@@ -367,6 +488,7 @@
               <ul class="guide-list">
                 <li>Dashboard: overall Zeny, inventory value, net worth, and top holdings.</li>
                 <li>Accounts: manage accounts, characters, and global item search.</li>
+                <li>Instance Tracker: track instance runs, loot counts, and remaining cooldowns.</li>
                 <li>Loans: record which items you lent to other players.</li>
                 <li>Share Codes: generate a hash to share items between apps.</li>
                 <li>Backup Center: export, import, and auto-save your data.</li>
@@ -374,6 +496,8 @@
                 <li>Item Finder: search by name, type, and category to add items.</li>
                 <li>Inventory: edit quantity, set manual prices, and filter by group.</li>
                 <li>Vending Stalls: track shop items, sales, tax, and net.</li>
+                <li>Hugel Race: open the integrated Hugel race calculator inside Ledger.</li>
+                <li>MVP Timer: track MVP spawn timers with maps, sounds, and rank panel.</li>
               </ul>
             </div>
             <div class="guide-block">
@@ -394,9 +518,21 @@
               </ul>
             </div>
             <div class="guide-block">
+              <h3>Companion Apps</h3>
+              <ul class="guide-list">
+                <li>Both tools run inside Ledger with an embedded view and an Open in new tab button.</li>
+                <li>Hugel Race and MVP Timer keep their own local browser data (same browser profile).</li>
+                <li>There is no central cloud/server save for these tools.</li>
+                <li>If an embedded tool looks empty after an update, use Open in new tab once and refresh.</li>
+              </ul>
+            </div>
+            <div class="guide-block">
               <h3>Limits & Notes</h3>
               <ul class="guide-list">
-                <li>Data is stored in the browser local storage. Export for backups.</li>
+                <li>Data is stored in browser local storage, not on a central server.</li>
+                <li>Saved data is tied to the current device and browser profile.</li>
+                <li>If browser/site data is cleared, your saved data can be lost.</li>
+                <li>Use Export regularly for backups.</li>
                 <li>Setting an inventory quantity to 0 removes the item.</li>
                 <li>Manual price overrides the item value used in totals.</li>
               </ul>
@@ -406,8 +542,13 @@
       </section>
     </main>
   </div>
+  <footer class="app-signature">
+    <div class="app-signature-name">PrensCin</div>
+    <div class="app-signature-note">Türkiye de Dizayn Edildi</div>
+  </footer>
 
   <script src="data/items-data.js"></script>
+  <script src="data/instances-data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

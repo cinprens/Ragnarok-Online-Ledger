@@ -1,5 +1,6 @@
 ﻿const ITEMS = Array.isArray(window.ITEMS_DATA) ? window.ITEMS_DATA : [];
 const META = window.ITEMS_META || {};
+const RAW_INSTANCES = Array.isArray(window.INSTANCES_DATA) ? window.INSTANCES_DATA : [];
 const STORAGE_KEY = "rht_accounting_state_v1";
 const SECTION_KEY = "rht_accounting_section";
 const BACKUP_KEY = "rht_accounting_last_backup_v1";
@@ -11,8 +12,15 @@ const AUTOSAVE_DELAY_MS = 800;
 const BACKUP_WARNING_DAYS = 7;
 const SHARE_DRAFT_KEY = "rht_accounting_share_draft_v1";
 const ZENY_TEMPLATE = { wallet: 0, storage: 0, merchant: 0, bank: 0, other: 0 };
+const INSTANCE_CATEGORY_ORDER = ["Hourly", "Daily", "Every 3 Days", "Weekly", "Various"];
+const INSTANCE_CATEGORY_SET = new Set(INSTANCE_CATEGORY_ORDER);
+const INSTANCE_REFRESH_MS = 60_000;
 
 const itemsById = new Map(ITEMS.map(item => [item.id, item]));
+const INSTANCES = RAW_INSTANCES
+  .map((entry, index) => normalizeInstanceDefinition(entry, index))
+  .filter(Boolean);
+const instanceById = new Map(INSTANCES.map(entry => [entry.id, entry]));
 
 const state = loadState();
 
@@ -50,6 +58,23 @@ const elements = {
   vendingCharacter: document.getElementById("vending-character"),
   vendingOpen: document.getElementById("vending-open"),
   vendingList: document.getElementById("vending-list"),
+  instanceSummaryChars: document.getElementById("instance-summary-chars"),
+  instanceSummaryRuns: document.getElementById("instance-summary-runs"),
+  instanceSummaryReady: document.getElementById("instance-summary-ready"),
+  instanceCharacterName: document.getElementById("instance-character-name"),
+  instanceCharacterAdd: document.getElementById("instance-character-add"),
+  instanceCharacterList: document.getElementById("instance-character-list"),
+  instanceCharacterSelect: document.getElementById("instance-character-select"),
+  instanceInstanceSelect: document.getElementById("instance-instance-select"),
+  instanceLoot: document.getElementById("instance-loot"),
+  instanceNote: document.getElementById("instance-note"),
+  instanceRunAdd: document.getElementById("instance-run-add"),
+  instanceRunStatus: document.getElementById("instance-run-status"),
+  instanceViewCharacter: document.getElementById("instance-view-character"),
+  instanceFilterState: document.getElementById("instance-filter-state"),
+  instanceFilterCategory: document.getElementById("instance-filter-category"),
+  instanceSearch: document.getElementById("instance-search"),
+  instanceTableBody: document.getElementById("instance-table-body"),
   loanPerson: document.getElementById("loan-person"),
   loanItem: document.getElementById("loan-item"),
   loanQty: document.getElementById("loan-qty"),
@@ -121,6 +146,148 @@ function createId(prefix = "acc") {
   return `${prefix}_${Date.now().toString(36)}_${rand}`;
 }
 
+function toSafeString(value) {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  return String(value);
+}
+
+function toSafeNonNegativeNumber(value, fallback = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return fallback;
+  return num;
+}
+
+function normalizeInstanceCategory(value) {
+  const category = toSafeString(value).trim();
+  if (INSTANCE_CATEGORY_SET.has(category)) return category;
+  return "Various";
+}
+
+function normalizeInstanceDefinition(entry, index = 0) {
+  if (!entry || typeof entry !== "object") return null;
+  const rawId = toSafeString(entry.id).trim();
+  const rawName = toSafeString(entry.name).trim();
+  const id = rawId || `instance_${index + 1}`;
+  const name = rawName || `Instance ${index + 1}`;
+  const category = normalizeInstanceCategory(entry.category);
+  const cooldown = toSafeString(entry.cooldown).trim() || "?";
+  return { id, name, category, cooldown };
+}
+
+function normalizeInstanceCharacter(entry, fallbackName = "Instance Runner") {
+  if (!entry || typeof entry !== "object") return null;
+  const name = (toSafeString(entry.name) || fallbackName || "Instance Runner").trim();
+  if (!name) return null;
+  return {
+    id: entry.id || createId("instchar"),
+    name
+  };
+}
+
+function normalizeInstanceCharacters(list = []) {
+  const seen = new Set();
+  const nameSet = new Set();
+  return list
+    .map((entry, index) => normalizeInstanceCharacter(entry, `Runner ${index + 1}`))
+    .filter(Boolean)
+    .map((character) => {
+      const key = character.name.toLowerCase();
+      if (nameSet.has(key)) return null;
+      let nextId = character.id;
+      while (seen.has(nextId)) {
+        nextId = createId("instchar");
+      }
+      nameSet.add(key);
+      seen.add(nextId);
+      return { ...character, id: nextId };
+    })
+    .filter(Boolean);
+}
+
+function normalizeInstanceRun(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const characterId = toSafeString(entry.characterId).trim();
+  const instanceId = toSafeString(entry.instanceId).trim();
+  if (!characterId || !instanceId || !instanceById.has(instanceId)) return null;
+  const parsedDate = entry.lastRunAt ? new Date(entry.lastRunAt) : null;
+  const lastRunAt = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : "";
+  const runs = Math.max(0, Math.floor(Number(entry.runs) || 0));
+  const totalLoot = Math.max(0, Math.floor(Number(entry.totalLoot) || 0));
+  const lastLoot = Math.max(0, Math.floor(Number(entry.lastLoot) || 0));
+  const note = toSafeString(entry.note).trim();
+  return {
+    id: entry.id || createId("irun"),
+    characterId,
+    instanceId,
+    lastRunAt,
+    runs,
+    totalLoot,
+    lastLoot,
+    note
+  };
+}
+
+function normalizeInstanceRuns(list = [], characters = []) {
+  const validCharacters = new Set((characters || []).map((entry) => entry.id));
+  const merged = new Map();
+  list.forEach((entry) => {
+    const run = normalizeInstanceRun(entry);
+    if (!run || !validCharacters.has(run.characterId)) return;
+    const key = `${run.characterId}:${run.instanceId}`;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, run);
+      return;
+    }
+    const existingTime = existing.lastRunAt ? new Date(existing.lastRunAt).getTime() : 0;
+    const runTime = run.lastRunAt ? new Date(run.lastRunAt).getTime() : 0;
+    const isNewer = runTime >= existingTime;
+    merged.set(key, {
+      ...existing,
+      ...(isNewer ? { lastRunAt: run.lastRunAt, lastLoot: run.lastLoot, note: run.note || existing.note } : {}),
+      runs: (Number(existing.runs) || 0) + (Number(run.runs) || 0),
+      totalLoot: (Number(existing.totalLoot) || 0) + (Number(run.totalLoot) || 0)
+    });
+  });
+  return [...merged.values()];
+}
+
+function normalizeInventoryEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const id = Number(entry.id);
+  if (!Number.isFinite(id) || id <= 0 || !itemsById.has(id)) return null;
+  const qty = Math.floor(Number(entry.qty));
+  if (!Number.isFinite(qty) || qty <= 0) return null;
+  const override = entry.override == null ? null : toSafeNonNegativeNumber(entry.override, null);
+  const refineRaw = Math.floor(Number(entry.refine));
+  const refine = Number.isFinite(refineRaw) ? Math.min(10, Math.max(0, refineRaw)) : 0;
+  return { id, qty, override, refine };
+}
+
+function normalizeInventoryItems(list = []) {
+  const merged = new Map();
+  list.forEach((entry) => {
+    const normalized = normalizeInventoryEntry(entry);
+    if (!normalized) return;
+    const existing = merged.get(normalized.id);
+    if (existing) {
+      existing.qty += normalized.qty;
+      if (normalized.override != null) existing.override = normalized.override;
+      existing.refine = Math.max(existing.refine, normalized.refine);
+      return;
+    }
+    merged.set(normalized.id, normalized);
+  });
+  return [...merged.values()];
+}
+
+function getEntryPrice(entry, basePrice = 0) {
+  const basis = toSafeNonNegativeNumber(basePrice, 0);
+  if (!entry || entry.override == null) return basis;
+  return toSafeNonNegativeNumber(entry.override, basis);
+}
+
 function normalizeVendingItem(item) {
   if (!item) return null;
   const id = Number(item.id);
@@ -132,7 +299,7 @@ function normalizeVendingItem(item) {
 
 function normalizeCharacter(entry, fallbackName = "Character") {
   if (!entry) return null;
-  const name = (entry.name || fallbackName || "Character").trim() || "Character";
+  const name = (toSafeString(entry.name) || fallbackName || "Character").trim() || "Character";
   const zeny = Math.max(0, Number(entry.zeny) || 0);
   return {
     id: entry.id || createId("char"),
@@ -170,7 +337,7 @@ function normalizeVendingSale(sale) {
 }
 
 function normalizeVendingStall(stall, fallbackName = "Vendor") {
-  const character = (stall?.character || stall?.name || fallbackName || "Vendor").trim() || "Vendor";
+  const character = (toSafeString(stall?.character || stall?.name) || fallbackName || "Vendor").trim() || "Vendor";
   const items = Array.isArray(stall?.items)
     ? stall.items.map(normalizeVendingItem).filter(Boolean).slice(0, 12)
     : [];
@@ -239,12 +406,14 @@ function normalizeLoans(list = []) {
 }
 
 function normalizeAccount(data = {}, fallbackName = "Account") {
-  const name = (data.name || fallbackName || "Account").trim() || "Account";
+  const name = (toSafeString(data.name) || fallbackName || "Account").trim() || "Account";
   const zeny = { ...ZENY_TEMPLATE, ...(data.zeny || {}) };
-  const items = Array.isArray(data.items) ? data.items : [];
+  const items = Array.isArray(data.items) ? normalizeInventoryItems(data.items) : [];
   const vending = Array.isArray(data.vending) ? normalizeVendingList(data.vending) : [];
   const characters = Array.isArray(data.characters) ? normalizeCharacters(data.characters) : [];
   const loans = Array.isArray(data.loans) ? normalizeLoans(data.loans) : [];
+  const instanceCharacters = Array.isArray(data.instanceCharacters) ? normalizeInstanceCharacters(data.instanceCharacters) : [];
+  const instanceRuns = Array.isArray(data.instanceRuns) ? normalizeInstanceRuns(data.instanceRuns, instanceCharacters) : [];
   return {
     id: data.id || createId(),
     name,
@@ -252,7 +421,9 @@ function normalizeAccount(data = {}, fallbackName = "Account") {
     items,
     vending,
     characters,
-    loans
+    loans,
+    instanceCharacters,
+    instanceRuns
   };
 }
 
@@ -301,8 +472,8 @@ function normalizeState(parsed) {
   const next = {
     accounts,
     activeAccountId,
-    inventorySearch: parsed.inventorySearch || base.inventorySearch,
-    inventoryGroup: parsed.inventoryGroup || base.inventoryGroup
+    inventorySearch: typeof parsed.inventorySearch === "string" ? parsed.inventorySearch : base.inventorySearch,
+    inventoryGroup: typeof parsed.inventoryGroup === "string" ? parsed.inventoryGroup : base.inventoryGroup
   };
 
   if (parsed.priceBasis) {
@@ -457,6 +628,7 @@ function setActiveAccount(accountId) {
   updateZenyInputs();
   renderInventory();
   renderLoans();
+  renderInstanceTracker();
   updateStats();
   renderAccountSelectors();
 }
@@ -501,14 +673,39 @@ function getActiveAccount() {
     account = state.accounts[0];
     saveState();
   }
+  let needsSave = false;
+  if (!account.zeny || typeof account.zeny !== "object") {
+    account.zeny = { ...ZENY_TEMPLATE };
+    needsSave = true;
+  } else {
+    account.zeny = { ...ZENY_TEMPLATE, ...account.zeny };
+  }
+  if (!Array.isArray(account.items)) {
+    account.items = [];
+    needsSave = true;
+  }
   if (!Array.isArray(account.vending)) {
     account.vending = [];
+    needsSave = true;
   }
   if (!Array.isArray(account.characters)) {
     account.characters = [];
+    needsSave = true;
   }
   if (!Array.isArray(account.loans)) {
     account.loans = [];
+    needsSave = true;
+  }
+  if (!Array.isArray(account.instanceCharacters)) {
+    account.instanceCharacters = [];
+    needsSave = true;
+  }
+  if (!Array.isArray(account.instanceRuns)) {
+    account.instanceRuns = [];
+    needsSave = true;
+  }
+  if (needsSave) {
+    saveState();
   }
   return account;
 }
@@ -520,7 +717,10 @@ function getAccountZenyTotal(account) {
 }
 
 function getAccountItemsOwned(account) {
-  return (account.items || []).reduce((sum, entry) => sum + (Number(entry.qty) || 0), 0);
+  return (account.items || []).reduce((sum, entry) => {
+    if (!entry || !itemsById.has(Number(entry.id))) return sum;
+    return sum + (Number(entry.qty) || 0);
+  }, 0);
 }
 
 function getAllAccountsZenyTotal() {
@@ -635,6 +835,132 @@ function getDaysSince(dateString) {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
+function getInstanceCategoryIndex(category) {
+  const index = INSTANCE_CATEGORY_ORDER.indexOf(category);
+  return index >= 0 ? index : INSTANCE_CATEGORY_ORDER.length;
+}
+
+function parseInstanceCooldown(cooldownText) {
+  const value = toSafeString(cooldownText).trim();
+  if (!value) return { type: "unknown", label: "?" };
+
+  const hoursMatch = value.match(/^(\d+(?:\.\d+)?)\s*hours?$/i);
+  if (hoursMatch) {
+    const hours = Number(hoursMatch[1]);
+    if (Number.isFinite(hours) && hours > 0) {
+      return { type: "duration", ms: Math.round(hours * 60 * 60 * 1000), label: value };
+    }
+  }
+
+  const daysMatch = value.match(/^(\d+(?:\.\d+)?)\s*days?$/i);
+  if (daysMatch) {
+    const days = Number(daysMatch[1]);
+    if (Number.isFinite(days) && days > 0) {
+      return { type: "duration", ms: Math.round(days * 24 * 60 * 60 * 1000), label: value };
+    }
+  }
+
+  const resetMatch = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (resetMatch) {
+    let hour = Number(resetMatch[1]) % 12;
+    const minute = Number(resetMatch[2]);
+    const ampm = resetMatch[3].toUpperCase();
+    if (ampm === "PM") hour += 12;
+    return { type: "daily_reset", hour, minute, label: value };
+  }
+
+  if (/weekends only/i.test(value)) {
+    return { type: "weekend", label: value };
+  }
+  if (/fridays only/i.test(value)) {
+    return { type: "friday", label: value };
+  }
+  return { type: "unknown", label: value };
+}
+
+function getNextDailyResetAfter(date, hour, minute) {
+  const next = new Date(date);
+  next.setHours(hour, minute, 0, 0);
+  if (next.getTime() <= date.getTime()) {
+    next.setDate(next.getDate() + 1);
+  }
+  return next;
+}
+
+function getNextWeekdayStart(dayIndex) {
+  const now = new Date();
+  const next = new Date(now);
+  const current = now.getDay();
+  let addDays = (dayIndex - current + 7) % 7;
+  if (addDays === 0) addDays = 7;
+  next.setDate(next.getDate() + addDays);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function formatRemainingDuration(ms) {
+  const totalMinutes = Math.max(0, Math.ceil(ms / (1000 * 60)));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function getInstanceAvailability(instance, runEntry, nowDate = new Date()) {
+  if (!instance) return { state: "unknown", text: "Unknown instance", nextAt: null };
+  if (!runEntry || !runEntry.lastRunAt) {
+    return { state: "ready", text: "Ready", nextAt: null };
+  }
+
+  const lastRunAt = new Date(runEntry.lastRunAt);
+  if (Number.isNaN(lastRunAt.getTime())) {
+    return { state: "unknown", text: "Invalid run date", nextAt: null };
+  }
+
+  const rule = parseInstanceCooldown(instance.cooldown);
+  if (rule.type === "duration") {
+    const nextAt = new Date(lastRunAt.getTime() + rule.ms);
+    const remainingMs = nextAt.getTime() - nowDate.getTime();
+    if (remainingMs <= 0) {
+      return { state: "ready", text: "Ready", nextAt };
+    }
+    return { state: "cooldown", text: formatRemainingDuration(remainingMs), nextAt };
+  }
+
+  if (rule.type === "daily_reset") {
+    const nextAt = getNextDailyResetAfter(lastRunAt, rule.hour, rule.minute);
+    const remainingMs = nextAt.getTime() - nowDate.getTime();
+    if (remainingMs <= 0) {
+      return { state: "ready", text: "Ready", nextAt };
+    }
+    return { state: "cooldown", text: `${formatRemainingDuration(remainingMs)} (reset ${rule.label})`, nextAt };
+  }
+
+  if (rule.type === "weekend") {
+    const nowDay = nowDate.getDay();
+    if (nowDay === 6 || nowDay === 0) {
+      return { state: "ready", text: "Weekend open", nextAt: null };
+    }
+    const nextAt = getNextWeekdayStart(6);
+    const remainingMs = nextAt.getTime() - nowDate.getTime();
+    return { state: "calendar", text: `${formatRemainingDuration(remainingMs)} to weekend`, nextAt };
+  }
+
+  if (rule.type === "friday") {
+    const nowDay = nowDate.getDay();
+    if (nowDay === 5) {
+      return { state: "ready", text: "Friday open", nextAt: null };
+    }
+    const nextAt = getNextWeekdayStart(5);
+    const remainingMs = nextAt.getTime() - nowDate.getTime();
+    return { state: "calendar", text: `${formatRemainingDuration(remainingMs)} to Friday`, nextAt };
+  }
+
+  return { state: "unknown", text: "Unknown cooldown", nextAt: null };
+}
+
 const OCR_CONFIG = {
   workerPath: "./assets/ocr/worker.min.js",
   corePath: "./assets/ocr/tesseract-core.wasm.js",
@@ -708,7 +1034,7 @@ function buildGroupBuckets(filters = getInventoryFilters()) {
     }
     const bucket = buckets.get(group);
     const basePrice = getBasisPrice(item);
-    const price = entry.override != null ? Number(entry.override) : basePrice;
+    const price = getEntryPrice(entry, basePrice);
     const qty = Number(entry.qty) || 0;
     bucket.entries.push({ entry, item, basePrice, price, qty });
     bucket.entryCount += 1;
@@ -735,7 +1061,7 @@ function buildGroupSummary() {
     }
     const bucket = buckets.get(group);
     const basePrice = getBasisPrice(item);
-    const price = entry.override != null ? Number(entry.override) : basePrice;
+    const price = getEntryPrice(entry, basePrice);
     const qty = Number(entry.qty) || 0;
     bucket.entryCount += 1;
     bucket.qtyCount += qty;
@@ -806,7 +1132,7 @@ function renderOverview() {
       const item = itemsById.get(entry.id);
       if (!item) return null;
       const basePrice = getBasisPrice(item);
-      const price = entry.override != null ? Number(entry.override) : basePrice;
+      const price = getEntryPrice(entry, basePrice);
       const qty = Number(entry.qty) || 0;
       return {
         id: entry.id,
@@ -1198,9 +1524,10 @@ function updateStats() {
   const totalZeny = getAccountZenyTotal(account);
   const allZeny = getAllAccountsZenyTotal();
   const inventoryValue = (account.items || []).reduce((sum, itemEntry) => {
+    if (!itemEntry || typeof itemEntry !== "object") return sum;
     const item = itemsById.get(itemEntry.id);
     const basePrice = getBasisPrice(item);
-    const price = itemEntry.override != null ? Number(itemEntry.override) : basePrice;
+    const price = getEntryPrice(itemEntry, basePrice);
     return sum + price * (Number(itemEntry.qty) || 0);
   }, 0);
   const netWorth = totalZeny + inventoryValue;
@@ -1243,10 +1570,11 @@ function renderAccounts() {
     if (acc.id === account.id) btn.classList.add("active");
     const totalZeny = getAccountZenyTotal(acc);
     const itemsOwned = getAccountItemsOwned(acc);
-    btn.innerHTML = `
-      <strong>${acc.name}</strong>
-      <span>${formatZeny(totalZeny)} • ${itemsOwned.toLocaleString("en-US")} items</span>
-    `;
+    const title = document.createElement("strong");
+    title.textContent = acc.name;
+    const meta = document.createElement("span");
+    meta.textContent = `${formatZeny(totalZeny)} • ${itemsOwned.toLocaleString("en-US")} items`;
+    btn.append(title, meta);
     btn.addEventListener("click", () => {
       setActiveAccount(acc.id);
     });
@@ -1283,7 +1611,7 @@ function renderGlobalSearchResults() {
       if (!item || !item.name) return;
       if (!item.name.toLowerCase().includes(query)) return;
       const basePrice = getBasisPrice(item);
-      const price = entry.override != null ? Number(entry.override) : basePrice;
+      const price = getEntryPrice(entry, basePrice);
       const qty = Number(entry.qty) || 0;
       hits.push({
         id: entry.id,
@@ -1797,13 +2125,15 @@ function loadShareDraft() {
     shareDraft.items = items
       .map((entry) => {
         const id = Number(entry.id);
-        if (!Number.isFinite(id) || id <= 0) return null;
+        if (!Number.isFinite(id) || id <= 0 || !itemsById.has(id)) return null;
         const item = itemsById.get(id);
+        const priceRaw = entry.price != null ? Number(entry.price) : null;
+        const price = priceRaw != null && Number.isFinite(priceRaw) && priceRaw >= 0 ? priceRaw : null;
         return {
           id,
           name: item?.name || entry.name || "Unknown Item",
-          qty: Math.max(1, Number(entry.qty) || 1),
-          price: entry.price != null ? Number(entry.price) : null,
+          qty: Math.max(1, Math.floor(Number(entry.qty) || 1)),
+          price,
           note: String(entry.note || "")
         };
       })
@@ -2037,6 +2367,7 @@ function handleImportFile(file) {
       }
       renderInventory();
       renderLoans();
+      renderInstanceTracker();
     } catch (_) {
       // ignore invalid file
     }
@@ -2262,6 +2593,322 @@ function renderLoans() {
   });
 }
 
+function setInstanceRunStatus(message = "") {
+  if (!elements.instanceRunStatus) return;
+  elements.instanceRunStatus.textContent = message;
+}
+
+function getInstanceTrackedRuns(account) {
+  return Array.isArray(account.instanceRuns) ? account.instanceRuns : [];
+}
+
+function getInstanceCharacters(account) {
+  return Array.isArray(account.instanceCharacters) ? account.instanceCharacters : [];
+}
+
+function renderInstanceCharacterList(account) {
+  if (!elements.instanceCharacterList) return;
+  const characters = getInstanceCharacters(account);
+  elements.instanceCharacterList.innerHTML = "";
+
+  if (!characters.length) {
+    const note = document.createElement("div");
+    note.className = "result-note";
+    note.textContent = "No tracker characters yet. Add your runners here (12+ supported).";
+    elements.instanceCharacterList.append(note);
+    return;
+  }
+
+  characters.forEach((character) => {
+    const row = document.createElement("div");
+    row.className = "instance-character-row";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = character.name;
+    nameInput.addEventListener("change", () => {
+      const nextName = nameInput.value.trim();
+      if (!nextName) {
+        nameInput.value = character.name;
+        return;
+      }
+      const duplicate = characters.some((entry) => entry.id !== character.id && entry.name.toLowerCase() === nextName.toLowerCase());
+      if (duplicate) {
+        nameInput.value = character.name;
+        setInstanceRunStatus("Character name already exists in tracker.");
+        return;
+      }
+      character.name = nextName;
+      saveState();
+      setInstanceRunStatus("");
+      renderInstanceTracker();
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "danger";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => {
+      account.instanceCharacters = characters.filter((entry) => entry.id !== character.id);
+      account.instanceRuns = getInstanceTrackedRuns(account).filter((entry) => entry.characterId !== character.id);
+      saveState();
+      renderInstanceTracker();
+    });
+
+    row.append(nameInput, removeBtn);
+    elements.instanceCharacterList.append(row);
+  });
+}
+
+function populateInstanceCategoryFilter() {
+  if (!elements.instanceFilterCategory) return;
+  const previous = elements.instanceFilterCategory.value || "all";
+  elements.instanceFilterCategory.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "all";
+  allOption.textContent = "All Categories";
+  elements.instanceFilterCategory.append(allOption);
+  INSTANCE_CATEGORY_ORDER.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    elements.instanceFilterCategory.append(option);
+  });
+  elements.instanceFilterCategory.value = INSTANCE_CATEGORY_SET.has(previous) ? previous : "all";
+}
+
+function populateInstanceSelect(select, previousValue = "") {
+  if (!select) return;
+  select.innerHTML = "";
+  const grouped = new Map();
+  INSTANCES.forEach((instance) => {
+    if (!grouped.has(instance.category)) {
+      grouped.set(instance.category, []);
+    }
+    grouped.get(instance.category).push(instance);
+  });
+  INSTANCE_CATEGORY_ORDER.forEach((category) => {
+    const list = grouped.get(category) || [];
+    if (!list.length) return;
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = category;
+    list
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((instance) => {
+        const option = document.createElement("option");
+        option.value = instance.id;
+        option.textContent = `${instance.name} (${instance.cooldown})`;
+        optgroup.append(option);
+      });
+    select.append(optgroup);
+  });
+  const firstId = INSTANCES[0]?.id || "";
+  select.value = instanceById.has(previousValue) ? previousValue : firstId;
+}
+
+function renderInstanceSelectors(account) {
+  const characters = getInstanceCharacters(account);
+
+  if (elements.instanceCharacterSelect) {
+    const previous = elements.instanceCharacterSelect.value;
+    elements.instanceCharacterSelect.innerHTML = "";
+    if (!characters.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Add tracker character first";
+      elements.instanceCharacterSelect.append(option);
+      elements.instanceCharacterSelect.value = "";
+      elements.instanceCharacterSelect.disabled = true;
+    } else {
+      characters.forEach((character) => {
+        const option = document.createElement("option");
+        option.value = character.id;
+        option.textContent = character.name;
+        elements.instanceCharacterSelect.append(option);
+      });
+      const fallback = characters[0]?.id || "";
+      elements.instanceCharacterSelect.value = characters.some((entry) => entry.id === previous) ? previous : fallback;
+      elements.instanceCharacterSelect.disabled = false;
+    }
+  }
+
+  if (elements.instanceViewCharacter) {
+    const previous = elements.instanceViewCharacter.value || "all";
+    elements.instanceViewCharacter.innerHTML = "";
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.textContent = "All Characters";
+    elements.instanceViewCharacter.append(allOption);
+    characters.forEach((character) => {
+      const option = document.createElement("option");
+      option.value = character.id;
+      option.textContent = character.name;
+      elements.instanceViewCharacter.append(option);
+    });
+    const fallback = "all";
+    elements.instanceViewCharacter.value = previous === "all" || characters.some((entry) => entry.id === previous) ? previous : fallback;
+  }
+
+  populateInstanceCategoryFilter();
+  populateInstanceSelect(elements.instanceInstanceSelect, elements.instanceInstanceSelect?.value || "");
+
+  if (elements.instanceRunAdd) {
+    elements.instanceRunAdd.disabled = !characters.length || !INSTANCES.length;
+  }
+}
+
+function renderInstanceSummary(account) {
+  const characters = getInstanceCharacters(account);
+  const runs = getInstanceTrackedRuns(account);
+  let readyCount = 0;
+  runs.forEach((entry) => {
+    const instance = instanceById.get(entry.instanceId);
+    if (!instance) return;
+    const availability = getInstanceAvailability(instance, entry);
+    if (availability.state === "ready") readyCount += 1;
+  });
+  if (elements.instanceSummaryChars) {
+    elements.instanceSummaryChars.textContent = String(characters.length);
+  }
+  if (elements.instanceSummaryRuns) {
+    elements.instanceSummaryRuns.textContent = String(runs.length);
+  }
+  if (elements.instanceSummaryReady) {
+    elements.instanceSummaryReady.textContent = String(readyCount);
+  }
+}
+
+function renderInstanceTable(account) {
+  if (!elements.instanceTableBody) return;
+  const characters = getInstanceCharacters(account);
+  const runs = getInstanceTrackedRuns(account);
+  const runMap = new Map(runs.map((entry) => [`${entry.characterId}:${entry.instanceId}`, entry]));
+  const viewCharacter = elements.instanceViewCharacter?.value || "all";
+  const stateFilter = elements.instanceFilterState?.value || "all";
+  const categoryFilter = elements.instanceFilterCategory?.value || "all";
+  const query = (elements.instanceSearch?.value || "").trim().toLowerCase();
+  const now = new Date();
+
+  elements.instanceTableBody.innerHTML = "";
+
+  if (!characters.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 10;
+    cell.className = "instance-empty";
+    cell.textContent = "Add tracker characters to start tracking instance cooldowns.";
+    row.append(cell);
+    elements.instanceTableBody.append(row);
+    return;
+  }
+
+  const targetCharacters = viewCharacter === "all"
+    ? characters
+    : characters.filter((entry) => entry.id === viewCharacter);
+
+  const rows = [];
+  targetCharacters.forEach((character) => {
+    INSTANCES.forEach((instance) => {
+      if (categoryFilter !== "all" && instance.category !== categoryFilter) return;
+      if (query && !`${instance.name} ${character.name}`.toLowerCase().includes(query)) return;
+      const runEntry = runMap.get(`${character.id}:${instance.id}`) || null;
+      const availability = getInstanceAvailability(instance, runEntry, now);
+      if (stateFilter !== "all" && availability.state !== stateFilter) return;
+      rows.push({
+        character,
+        instance,
+        runEntry,
+        availability
+      });
+    });
+  });
+
+  rows.sort((a, b) => {
+    const charDiff = a.character.name.localeCompare(b.character.name);
+    if (charDiff !== 0) return charDiff;
+    const catDiff = getInstanceCategoryIndex(a.instance.category) - getInstanceCategoryIndex(b.instance.category);
+    if (catDiff !== 0) return catDiff;
+    return a.instance.name.localeCompare(b.instance.name);
+  });
+
+  if (!rows.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 10;
+    cell.className = "instance-empty";
+    cell.textContent = "No rows match this filter.";
+    row.append(cell);
+    elements.instanceTableBody.append(row);
+    return;
+  }
+
+  rows.forEach((entry) => {
+    const row = document.createElement("tr");
+    row.className = `instance-state-${entry.availability.state}`;
+
+    const characterCell = document.createElement("td");
+    characterCell.textContent = entry.character.name;
+    const instanceCell = document.createElement("td");
+    instanceCell.textContent = entry.instance.name;
+    const categoryCell = document.createElement("td");
+    categoryCell.textContent = entry.instance.category;
+    const cooldownCell = document.createElement("td");
+    cooldownCell.textContent = entry.instance.cooldown;
+    const remainingCell = document.createElement("td");
+    remainingCell.textContent = entry.availability.text;
+    const lastRunCell = document.createElement("td");
+    lastRunCell.textContent = entry.runEntry?.lastRunAt ? new Date(entry.runEntry.lastRunAt).toLocaleString() : "-";
+    const lastLootCell = document.createElement("td");
+    lastLootCell.textContent = entry.runEntry ? formatNumber(entry.runEntry.lastLoot || 0) : "-";
+    const totalLootCell = document.createElement("td");
+    totalLootCell.textContent = entry.runEntry ? formatNumber(entry.runEntry.totalLoot || 0) : "-";
+    const runsCell = document.createElement("td");
+    runsCell.textContent = entry.runEntry ? formatNumber(entry.runEntry.runs || 0) : "-";
+    const noteCell = document.createElement("td");
+    noteCell.className = "instance-note";
+    noteCell.textContent = entry.runEntry?.note || "";
+
+    row.append(
+      characterCell,
+      instanceCell,
+      categoryCell,
+      cooldownCell,
+      remainingCell,
+      lastRunCell,
+      lastLootCell,
+      totalLootCell,
+      runsCell,
+      noteCell
+    );
+    elements.instanceTableBody.append(row);
+  });
+}
+
+function renderInstanceTracker() {
+  if (!elements.instanceCharacterList || !elements.instanceTableBody) return;
+  const account = getActiveAccount();
+  const currentCharacters = Array.isArray(account.instanceCharacters) ? account.instanceCharacters : [];
+  const currentRuns = Array.isArray(account.instanceRuns) ? account.instanceRuns : [];
+  const normalizedCharacters = normalizeInstanceCharacters(currentCharacters);
+  const normalizedRuns = normalizeInstanceRuns(currentRuns, normalizedCharacters);
+  const charsChanged = JSON.stringify(currentCharacters) !== JSON.stringify(normalizedCharacters);
+  const runsChanged = JSON.stringify(currentRuns) !== JSON.stringify(normalizedRuns);
+  if (charsChanged || runsChanged) {
+    account.instanceCharacters = normalizedCharacters;
+    account.instanceRuns = normalizedRuns;
+    saveState();
+  } else {
+    account.instanceCharacters = normalizedCharacters;
+    account.instanceRuns = normalizedRuns;
+  }
+
+  renderInstanceCharacterList(account);
+  renderInstanceSelectors(account);
+  renderInstanceSummary(account);
+  renderInstanceTable(account);
+}
+
 function populateFilters() {
   const types = new Set();
   const categories = new Set();
@@ -2401,8 +3048,9 @@ function renderInventory() {
     list.className = "inventory-group-list";
 
     bucket.entries.forEach(({ entry, item, basePrice }) => {
-      const displayPrice = entry.override != null ? formatNumber(entry.override) : "";
-      const priceValue = entry.override != null ? Number(entry.override) : basePrice;
+      const hasOverride = entry.override != null && Number.isFinite(Number(entry.override));
+      const displayPrice = hasOverride ? formatNumber(entry.override) : "";
+      const priceValue = getEntryPrice(entry, basePrice);
       const totalValue = priceValue * (Number(entry.qty) || 0);
       const refinable = isRefinableItem(item);
       const refineValue = Math.min(10, Math.max(0, Number(entry.refine) || 0));
@@ -2447,7 +3095,7 @@ function renderInventory() {
           return;
         }
         entry.qty = nextQty;
-        const updatedTotal = (entry.override != null ? Number(entry.override) : basePrice) * entry.qty;
+        const updatedTotal = getEntryPrice(entry, basePrice) * entry.qty;
         valueTag.textContent = formatZeny(updatedTotal);
         saveState();
         updateStats();
@@ -2460,7 +3108,7 @@ function renderInventory() {
       priceInput.addEventListener("input", () => {
         const val = parseOptionalNumber(priceInput.value);
         entry.override = val;
-        const updatedPrice = entry.override != null ? Number(entry.override) : basePrice;
+        const updatedPrice = getEntryPrice(entry, basePrice);
         valueTag.textContent = formatZeny(updatedPrice * (Number(entry.qty) || 0));
         saveState();
         updateStats();
@@ -2637,6 +3285,124 @@ function attachEvents() {
         elements.vendingOpen?.click();
       }
     });
+  }
+  if (
+    elements.instanceCharacterAdd ||
+    elements.instanceRunAdd ||
+    elements.instanceViewCharacter ||
+    elements.instanceFilterState ||
+    elements.instanceFilterCategory ||
+    elements.instanceSearch
+  ) {
+    if (elements.instanceCharacterAdd) {
+      elements.instanceCharacterAdd.addEventListener("click", () => {
+        const account = getActiveAccount();
+        account.instanceCharacters = getInstanceCharacters(account);
+        const name = elements.instanceCharacterName ? elements.instanceCharacterName.value.trim() : "";
+        if (!name) {
+          setInstanceRunStatus("Enter a tracker character name.");
+          return;
+        }
+        const duplicate = account.instanceCharacters.some((entry) => entry.name.toLowerCase() === name.toLowerCase());
+        if (duplicate) {
+          setInstanceRunStatus("Character already exists in tracker.");
+          return;
+        }
+        account.instanceCharacters.push({
+          id: createId("instchar"),
+          name
+        });
+        account.instanceCharacters = normalizeInstanceCharacters(account.instanceCharacters);
+        account.instanceRuns = normalizeInstanceRuns(getInstanceTrackedRuns(account), account.instanceCharacters);
+        saveState();
+        if (elements.instanceCharacterName) elements.instanceCharacterName.value = "";
+        setInstanceRunStatus("");
+        renderInstanceTracker();
+      });
+    }
+
+    if (elements.instanceCharacterName) {
+      elements.instanceCharacterName.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          elements.instanceCharacterAdd?.click();
+        }
+      });
+    }
+
+    if (elements.instanceRunAdd) {
+      elements.instanceRunAdd.addEventListener("click", () => {
+        const account = getActiveAccount();
+        const characterId = elements.instanceCharacterSelect?.value || "";
+        const instanceId = elements.instanceInstanceSelect?.value || "";
+        if (!characterId || !instanceId) {
+          setInstanceRunStatus("Select character and instance.");
+          return;
+        }
+        const character = getInstanceCharacters(account).find((entry) => entry.id === characterId);
+        const instance = instanceById.get(instanceId);
+        if (!character || !instance) {
+          setInstanceRunStatus("Invalid character or instance.");
+          return;
+        }
+        const loot = Math.max(0, parseNumber(elements.instanceLoot?.value || "0"));
+        const note = elements.instanceNote ? elements.instanceNote.value.trim() : "";
+        const nowIso = new Date().toISOString();
+
+        account.instanceRuns = getInstanceTrackedRuns(account);
+        const existing = account.instanceRuns.find((entry) => entry.characterId === characterId && entry.instanceId === instanceId);
+        if (existing) {
+          existing.lastRunAt = nowIso;
+          existing.runs = (Number(existing.runs) || 0) + 1;
+          existing.lastLoot = loot;
+          existing.totalLoot = (Number(existing.totalLoot) || 0) + loot;
+          if (note) {
+            existing.note = note;
+          }
+        } else {
+          account.instanceRuns.push({
+            id: createId("irun"),
+            characterId,
+            instanceId,
+            lastRunAt: nowIso,
+            runs: 1,
+            totalLoot: loot,
+            lastLoot: loot,
+            note
+          });
+        }
+        account.instanceRuns = normalizeInstanceRuns(account.instanceRuns, getInstanceCharacters(account));
+        saveState();
+        if (elements.instanceLoot) elements.instanceLoot.value = formatNumber(0);
+        if (elements.instanceNote) elements.instanceNote.value = "";
+        setInstanceRunStatus(`${character.name} -> ${instance.name} saved.`);
+        renderInstanceTracker();
+      });
+    }
+
+    if (elements.instanceViewCharacter) {
+      elements.instanceViewCharacter.addEventListener("change", () => {
+        renderInstanceTable(getActiveAccount());
+      });
+    }
+
+    if (elements.instanceFilterState) {
+      elements.instanceFilterState.addEventListener("change", () => {
+        renderInstanceTable(getActiveAccount());
+      });
+    }
+
+    if (elements.instanceFilterCategory) {
+      elements.instanceFilterCategory.addEventListener("change", () => {
+        renderInstanceTable(getActiveAccount());
+      });
+    }
+
+    if (elements.instanceSearch) {
+      elements.instanceSearch.addEventListener("input", () => {
+        renderInstanceTable(getActiveAccount());
+      });
+    }
   }
   if (elements.loanItem || elements.loanAdd || elements.loanFilter) {
     let selectedLoanItemId = null;
@@ -2873,11 +3639,16 @@ function attachEvents() {
             if (!itemId && entry.name) {
               itemId = matchLineToItem(entry.name);
             }
+            if (itemId && !itemsById.has(itemId)) {
+              itemId = null;
+            }
+            const priceRaw = entry.price != null ? Number(entry.price) : null;
+            const price = priceRaw != null && Number.isFinite(priceRaw) && priceRaw >= 0 ? priceRaw : null;
             return {
               itemId,
               itemName: entry.name || "",
-              qty: Math.max(1, Number(entry.qty) || 1),
-              price: entry.price != null ? Number(entry.price) : null,
+              qty: Math.max(1, Math.floor(Number(entry.qty) || 1)),
+              price,
               note: String(entry.note || "")
             };
           });
@@ -2901,11 +3672,13 @@ function attachEvents() {
           return;
         }
         const account = getActiveAccount();
+        account.items = Array.isArray(account.items) ? account.items : [];
         shareImportMatches.forEach((entry) => {
           if (!entry.itemId) return;
           const existing = account.items.find(itemEntry => itemEntry.id === entry.itemId);
           if (existing) {
-            existing.qty = (Number(existing.qty) || 0) + entry.qty;
+            const currentQty = Math.max(0, Number(existing.qty) || 0);
+            existing.qty = currentQty + entry.qty;
             if (entry.price != null) {
               existing.override = entry.price;
             }
@@ -2918,6 +3691,7 @@ function attachEvents() {
             });
           }
         });
+        account.items = normalizeInventoryItems(account.items);
         saveState();
         renderInventory();
         shareImportMeta = null;
@@ -3043,6 +3817,7 @@ function attachEvents() {
     }
     renderInventory();
     renderLoans();
+    renderInstanceTracker();
   });
   elements.clearInventory.addEventListener("click", () => {
     if (!confirm("Clear inventory list?")) return;
@@ -3066,6 +3841,7 @@ function init() {
   if (elements.characterZeny) setupNumericInput(elements.characterZeny, { allowEmpty: true });
   if (elements.zenyCharacterValue) setupNumericInput(elements.zenyCharacterValue);
   if (elements.sharePrice) setupNumericInput(elements.sharePrice, { allowEmpty: true });
+  if (elements.instanceLoot) setupNumericInput(elements.instanceLoot);
   loadShareDraft();
   updateBackupStatus();
   updateZenyInputs();
@@ -3091,11 +3867,17 @@ function init() {
   renderSearchResults();
   renderInventory();
   renderLoans();
+  renderInstanceTracker();
   renderShareList();
   renderShareGeneratedMeta({
     from: shareDraft.from || "",
     note: shareDraft.generalNote || ""
   });
+  setInterval(() => {
+    if (!elements.instanceTableBody) return;
+    renderInstanceSummary(getActiveAccount());
+    renderInstanceTable(getActiveAccount());
+  }, INSTANCE_REFRESH_MS);
   initAutoSave().catch(() => updateBackupStatus());
 }
 
